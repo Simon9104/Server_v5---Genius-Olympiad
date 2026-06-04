@@ -392,6 +392,143 @@
     .col-pill span { color: var(--muted); font-size: .72rem; }
 
     /* ── FOOTER ── */
+    /* ── CODE BLOCKS ── */
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem 1.4rem;
+      overflow-x: auto;
+      font-size: .82rem;
+      line-height: 1.7;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+    }
+    pre .c  { color: #6e7681; }
+    pre .k  { color: #ff7b72; }
+    pre .s  { color: #a5d6ff; }
+    pre .n  { color: #79c0ff; }
+    pre .f  { color: #d2a8ff; }
+    pre .v  { color: #ffa657; }
+    pre .num{ color: #79c0ff; }
+
+    /* ── STEPS ── */
+    .steps { counter-reset: step; }
+    .step {
+      display: flex;
+      gap: 1.2rem;
+      margin-bottom: 1.8rem;
+    }
+    .step-num {
+      counter-increment: step;
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #000;
+      font-weight: 800;
+      font-size: .9rem;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+    .step-body .step-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: .4rem;
+    }
+    .step-body p {
+      color: var(--muted);
+      font-size: .88rem;
+      margin-bottom: .7rem;
+    }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .tab-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: .35rem .9rem;
+      border-radius: 6px;
+      font-size: .82rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── LIVE DASHBOARD MOCKUP ── */
+    .dashboard-mockup {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+    }
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .dash-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .dash-card .dc-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .dash-card .dc-value { font-size: 2rem; font-weight: 800; margin: .3rem 0; }
+    .dash-card .dc-unit  { font-size: .78rem; color: var(--muted); }
+    .dash-card .dc-bar-wrap {
+      background: var(--border);
+      border-radius: 4px;
+      height: 5px;
+      margin-top: .6rem;
+      overflow: hidden;
+    }
+    .dash-card .dc-bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width .6s ease;
+    }
+    .status-row {
+      display: flex;
+      gap: .8rem;
+      flex-wrap: wrap;
+    }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .3rem .9rem;
+      font-size: .82rem;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    /* ── CALLOUT ── */
+    .callout {
+      border-left: 3px solid var(--accent);
+      background: #161e2e;
+      padding: .8rem 1rem;
+      border-radius: 0 6px 6px 0;
+      font-size: .86rem;
+      color: var(--muted);
+      margin: .8rem 0;
+    }
+    .callout strong { color: var(--accent); }
+
     footer {
       border-top: 1px solid var(--border);
       padding: 1.5rem 2rem;
@@ -418,6 +555,7 @@
   <a href="#protocol">Protocol</a>
   <a href="#tasks">Tasks</a>
   <a href="#schema">CSV Schema</a>
+  <a href="#display">Display Data</a>
   <div class="badge">● LIVE v5</div>
 </nav>
 
@@ -786,7 +924,292 @@
     </div>
   </section>
 
+  <!-- DISPLAY DATA -->
+  <section id="display">
+    <div class="section-title"><span class="dot" style="background:var(--green)"></span> How to Display Data from the Picos</div>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:2rem;">
+      Three methods to get sensor readings out of the server and onto a screen — from the Pico itself, to the cloud, to a custom live dashboard.
+    </p>
+
+    <!-- STEP 1 — Pico sender code -->
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body" style="flex:1">
+          <div class="step-title">MicroPython — Send data from each Pico</div>
+          <p>Each Pico opens a TCP socket to the server on port 9991 and sends readings as plain key-value lines. Copy the template below onto each Pico, changing the <code>PICO_ID</code> (1, 2, or 3) and the <code>SERVER_IP</code>.</p>
+
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(event,'pico1')">Pico 1 — Semi-Closed</button>
+            <button class="tab-btn" onclick="switchTab(event,'pico2')">Pico 2 — Fully-Closed</button>
+            <button class="tab-btn" onclick="switchTab(event,'pico3')">Pico 3 — Free Planting</button>
+          </div>
+
+          <div id="pico1" class="tab-pane active">
+<pre><span class="k">import</span> socket, time
+<span class="k">from</span> dht <span class="k">import</span> DHT22
+<span class="k">from</span> machine <span class="k">import</span> Pin
+<span class="k">import</span> gc
+
+<span class="n">SERVER_IP</span>  = <span class="s">'192.168.1.X'</span>   <span class="c"># ← replace with your server IP</span>
+<span class="n">SERVER_PORT</span> = <span class="num">9991</span>
+<span class="n">PICO_ID</span>    = <span class="num">1</span>               <span class="c"># ← 1, 2, or 3</span>
+<span class="n">INTERVAL</span>   = <span class="num">30</span>              <span class="c"># seconds between sends</span>
+
+<span class="n">sensor</span> = DHT22(Pin(<span class="num">15</span>))
+<span class="n">door_pin</span> = Pin(<span class="num">16</span>, Pin.IN)
+<span class="n">pump_pin</span> = Pin(<span class="num">17</span>, Pin.IN)
+
+<span class="k">def</span> <span class="f">send_data</span>():
+    sensor.measure()
+    <span class="n">ram_free</span> = gc.mem_free()
+    <span class="n">ram_total</span> = gc.mem_alloc() + <span class="n">ram_free</span>
+    <span class="n">ram_pct</span> = round((<span class="num">1</span> - <span class="n">ram_free</span> / <span class="n">ram_total</span>) * <span class="num">100</span>, <span class="num">1</span>)
+
+    <span class="n">payload</span> = (
+        <span class="s">f"HM{PICO_ID}:{sensor.humidity()}\n"</span>
+        <span class="s">f"TP{PICO_ID}:{sensor.temperature()}\n"</span>
+        <span class="s">f"DRRS{PICO_ID}:{door_pin.value()}\n"</span>
+        <span class="s">f"PS{PICO_ID}:{pump_pin.value()}\n"</span>
+        <span class="s">f"RAM{PICO_ID}:{ram_pct}\n"</span>
+    )
+    <span class="k">try</span>:
+        s = socket.socket()
+        s.connect((<span class="n">SERVER_IP</span>, <span class="n">SERVER_PORT</span>))
+        s.send(<span class="n">payload</span>.encode())
+        s.close()
+    <span class="k">except Exception as</span> e:
+        print(<span class="s">f"Send error: {e}"</span>)
+
+<span class="k">while True</span>:
+    send_data()
+    time.sleep(<span class="n">INTERVAL</span>)</pre>
+          </div>
+
+          <div id="pico2" class="tab-pane">
+<pre><span class="c"># Same as Pico 1 — change PICO_ID only</span>
+<span class="n">PICO_ID</span> = <span class="num">2</span>
+<span class="n">SERVER_IP</span> = <span class="s">'192.168.1.X'</span>
+
+<span class="c"># All prefix labels become HM2, TP2, DRRS2, PS2, RAM2 automatically</span></pre>
+          </div>
+
+          <div id="pico3" class="tab-pane">
+<pre><span class="c"># Same as Pico 1 — change PICO_ID only</span>
+<span class="n">PICO_ID</span> = <span class="num">3</span>
+<span class="n">SERVER_IP</span> = <span class="s">'192.168.1.X'</span>
+
+<span class="c"># All prefix labels become HM3, TP3, DRRS3, PS3, RAM3 automatically</span></pre>
+          </div>
+
+          <div class="callout"><strong>Pin mapping:</strong> DHT22 data → GP15 · Door sensor → GP16 · Pump relay → GP17. Adjust <code>Pin()</code> numbers to match your wiring.</div>
+        </div>
+      </div>
+
+      <!-- STEP 2 — ThingSpeak -->
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body" style="flex:1">
+          <div class="step-title">View live charts on ThingSpeak</div>
+          <p>The server pushes data to ThingSpeak every 2 minutes. Each channel has auto-generated charts you can embed anywhere.</p>
+          <div class="proto-table-wrap">
+            <table>
+              <thead>
+                <tr><th>Greenhouse</th><th>Field 1</th><th>Field 2</th><th>Field 3</th><th>Field 4</th><th>How to view</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="tag badge-semi" style="padding:3px 8px">Semi-Closed</span></td>
+                  <td>Humidity %</td><td>Temp °C</td><td>Door 0/1</td><td>Pump 0/1</td>
+                  <td><code>thingspeak.com/channels/&lt;CH1&gt;/charts</code></td>
+                </tr>
+                <tr>
+                  <td><span class="tag badge-full" style="padding:3px 8px">Fully-Closed</span></td>
+                  <td>Humidity %</td><td>Temp °C</td><td>Door 0/1</td><td>Pump 0/1</td>
+                  <td><code>thingspeak.com/channels/&lt;CH2&gt;/charts</code></td>
+                </tr>
+                <tr>
+                  <td><span class="tag badge-free" style="padding:3px 8px">Free Planting</span></td>
+                  <td>Humidity %</td><td>Temp °C</td><td>Door 0/1</td><td>Pump 0/1</td>
+                  <td><code>thingspeak.com/channels/&lt;CH3&gt;/charts</code></td>
+                </tr>
+                <tr>
+                  <td><span class="tag tag-ram" style="padding:3px 8px">Device Health</span></td>
+                  <td>RAM1 %</td><td>RAM2 %</td><td>RAM3 %</td><td>—</td>
+                  <td><code>thingspeak.com/channels/&lt;CH4&gt;/charts</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout"><strong>Embed a chart:</strong> On any ThingSpeak channel page → click a chart → <em>Share</em> → copy the <code>&lt;iframe&gt;</code> snippet and paste it into your own webpage.</div>
+
+          <p style="margin-top:.8rem">To fetch the latest value programmatically:</p>
+<pre><span class="c"># Python — read latest humidity from Pico 1 channel</span>
+<span class="k">import</span> requests
+<span class="n">CH_ID</span>  = <span class="s">'YOUR_CHANNEL_ID'</span>
+<span class="n">RD_KEY</span> = <span class="s">'YOUR_READ_API_KEY'</span>
+<span class="n">r</span> = requests.get(
+    <span class="s">f"https://api.thingspeak.com/channels/{CH_ID}/fields/1/last.json"</span>,
+    params={<span class="s">"api_key"</span>: <span class="n">RD_KEY</span>}
+)
+print(<span class="s">f"Latest humidity: {r.json()['field1']} %"</span>)</pre>
+        </div>
+      </div>
+
+      <!-- STEP 3 — CSV -->
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body" style="flex:1">
+          <div class="step-title">Read data directly from the CSV backup</div>
+          <p>The server writes <code>backup_data_server.csv</code> every 10 minutes. You can load it with pandas, Excel, or any spreadsheet tool.</p>
+<pre><span class="k">import</span> pandas <span class="k">as</span> pd
+
+<span class="n">df</span> = pd.read_csv(<span class="s">'backup_data_server.csv'</span>, parse_dates=[<span class="s">'Time'</span>])
+
+<span class="c"># Latest reading per greenhouse</span>
+latest = <span class="n">df</span>.iloc[-<span class="num">1</span>]
+print(<span class="s">f"Semi-Closed  — Humidity: {latest['Humidity SC']}%  Temp: {latest['TP SC']}°C"</span>)
+print(<span class="s">f"Fully-Closed — Humidity: {latest['HM C']}%  Temp: {latest['TP C']}°C"</span>)
+print(<span class="s">f"Free Planting — Humidity: {latest['HM FREE']}%  Temp: {latest['TP FREE']}°C"</span>)
+
+<span class="c"># Plot humidity over time</span>
+<span class="k">import</span> matplotlib.pyplot <span class="k">as</span> plt
+<span class="n">df</span>.plot(x=<span class="s">'Time'</span>, y=[<span class="s">'Humidity SC'</span>, <span class="s">'HM C'</span>, <span class="s">'HM FREE'</span>])
+plt.title(<span class="s">'Greenhouse Humidity Over Time'</span>)
+plt.ylabel(<span class="s">'Humidity (%)'</span>)
+plt.show()</pre>
+        </div>
+      </div>
+
+      <!-- STEP 4 — Live dashboard mockup -->
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body" style="flex:1">
+          <div class="step-title">Live dashboard — what the data looks like</div>
+          <p>Below is an example of how real-time Pico readings would appear in a monitoring dashboard. Values update as the server receives new TCP packets.</p>
+
+          <div class="dashboard-mockup">
+            <div style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">
+              <span>🌱 Greenhouse Live Monitor</span>
+              <span style="color:var(--green);font-weight:600;">● Live</span>
+            </div>
+
+            <!-- Semi-Closed -->
+            <div style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">Pico 1 — Semi-Closed</div>
+            <div class="dash-grid" style="margin-bottom:1.5rem">
+              <div class="dash-card">
+                <div class="dc-label">Humidity</div>
+                <div class="dc-value" style="color:#58c8ff">65.5</div>
+                <div class="dc-unit">%</div>
+                <div class="dc-bar-wrap"><div class="dc-bar" style="width:65.5%;background:#58c8ff"></div></div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Temperature</div>
+                <div class="dc-value" style="color:#ff7b7b">22.3</div>
+                <div class="dc-unit">°C</div>
+                <div class="dc-bar-wrap"><div class="dc-bar" style="width:44.6%;background:#ff7b7b"></div></div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Door / Relay</div>
+                <div class="dc-value" style="color:var(--green)">OPEN</div>
+                <div class="dc-unit">DRRS1 = 1</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Pump</div>
+                <div class="dc-value" style="color:var(--muted)">OFF</div>
+                <div class="dc-unit">PS1 = 0</div>
+              </div>
+            </div>
+
+            <!-- Fully-Closed -->
+            <div style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">Pico 2 — Fully-Closed</div>
+            <div class="dash-grid" style="margin-bottom:1.5rem">
+              <div class="dash-card">
+                <div class="dc-label">Humidity</div>
+                <div class="dc-value" style="color:#58c8ff">78.1</div>
+                <div class="dc-unit">%</div>
+                <div class="dc-bar-wrap"><div class="dc-bar" style="width:78.1%;background:#58c8ff"></div></div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Temperature</div>
+                <div class="dc-value" style="color:#ff7b7b">27.8</div>
+                <div class="dc-unit">°C</div>
+                <div class="dc-bar-wrap"><div class="dc-bar" style="width:55.6%;background:#ff7b7b"></div></div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Door / Relay</div>
+                <div class="dc-value" style="color:var(--muted)">CLOSED</div>
+                <div class="dc-unit">DRRS2 = 0</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Pump</div>
+                <div class="dc-value" style="color:var(--green)">ON</div>
+                <div class="dc-unit">PS2 = 1</div>
+              </div>
+            </div>
+
+            <!-- Free Planting -->
+            <div style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">Pico 3 — Free Planting</div>
+            <div class="dash-grid" style="margin-bottom:1.5rem">
+              <div class="dash-card">
+                <div class="dc-label">Humidity</div>
+                <div class="dc-value" style="color:#58c8ff">54.2</div>
+                <div class="dc-unit">%</div>
+                <div class="dc-bar-wrap"><div class="dc-bar" style="width:54.2%;background:#58c8ff"></div></div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Temperature</div>
+                <div class="dc-value" style="color:#ff7b7b">19.4</div>
+                <div class="dc-unit">°C</div>
+                <div class="dc-bar-wrap"><div class="dc-bar" style="width:38.8%;background:#ff7b7b"></div></div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Door / Relay</div>
+                <div class="dc-value" style="color:var(--muted)">CLOSED</div>
+                <div class="dc-unit">DRRS3 = 0</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-label">Pump</div>
+                <div class="dc-value" style="color:var(--muted)">OFF</div>
+                <div class="dc-unit">PS3 = 0</div>
+              </div>
+            </div>
+
+            <!-- Device health -->
+            <div style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">Device Health</div>
+            <div class="status-row">
+              <div class="status-pill">
+                <div class="status-dot" style="background:var(--green)"></div>
+                Pico 1 — RAM 45.2%
+              </div>
+              <div class="status-pill">
+                <div class="status-dot" style="background:var(--green)"></div>
+                Pico 2 — RAM 38.7%
+              </div>
+              <div class="status-pill">
+                <div class="status-dot" style="background:var(--yellow)"></div>
+                Pico 3 — RAM 71.3%
+              </div>
+            </div>
+          </div>
+
+          <div class="callout" style="margin-top:1rem"><strong>Door / Pump values:</strong> <code>0</code> = OFF / CLOSED &nbsp;·&nbsp; <code>1</code> = ON / OPEN. These are the raw binary values sent directly from the Pico relay/GPIO pins.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </div>
+
+<script>
+  function switchTab(e, id) {
+    const parent = e.target.closest('.step-body');
+    parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    parent.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    parent.querySelector('#' + id).classList.add('active');
+  }
+</script>
 
 <footer>
   Greenhouse IoT Server v5 &mdash; &copy; 2025 Simon Onderisin. All rights reserved. &nbsp;|&nbsp;
