@@ -1,320 +1,218 @@
-from time import sleep
-import socket, random, asyncio, requests, os, datetime,  pandas as pd
+import asyncio
+import datetime
+import os
+import socket
+
+import pandas as pd
+import requests
 
 print('System is starting right now!!!!')
 print('All rights reserved by Simon Onderisin ® 2025')
-print("Any way of copying this code is strictly prohibited!!!!")
-sleep(5)
-os.system('clear')
+print('Any way of copying this code is strictly prohibited!!!!')
 
-print('System was started successfully!!!!')
+# ── Network ──────────────────────────────────────────────────────────────────
+SERVER_HOST = '0.0.0.0'
+SERVER_PORT = 9991
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(('0.0.0.0', 9991))
-server.listen(5)
-
-hm1 = 0
-hm2 = 0
-hm3 = 0
-
-temp1 = 0
-temp2 = 0
-temp3 = 0
-
-door1 = 0
-door2 = 0 
-door3 = 0
-
-pump1 = 0
-pump2 = 0
-pump3 = 0
-
-sequence_hm1 = 0
-sequence_tp1 = 0
-sequence_drs1 = 0
-sequence_pms1 = 0
-
-sequence_hm2 = 0
-sequence_tp2 = 0
-sequence_drs2 = 0
-sequence_pms2 = 0
-
-sequence_hm3 = 0
-sequence_tp3 = 0
-sequence_drs3 = 0
-sequence_pms3 = 0
-
-sequence_RAM1 = 0
-sequence_RAM2 = 0 
-sequence_RAM3 = 0
-
-RAM1_num = None
-RAM2_num = None
-RAM3_num = None
-
-client1_IP = '192.168.1.59'
-client2_IP = '192.168.1.118'
-client3_IP = '192.168.1.118'
-
-
-URL= 'https://api.thingspeak.com/update'
-API1 = 'XRHM95UX4K3FVX0J'
-API2 = 'VT7JT0U9KSCCYMTG'
-API3 = 'KK2CRU2B3CKZW40C'
-API_RAM = 'ENMLII2NCVO8DNZM'
-
-URL_discord = 'https://discord.com/api/v9/channels/1409588804951605413/messages'
-data ={
-    "content": "Program was started"
+PICO_IPS = {
+    1: '192.168.1.59',
+    2: '192.168.1.118',
+    3: '192.168.1.118',
 }
 
-header = {
-    "authorization": 'MTM5OTA4Mzg2ODk4Mzc4NzU0MQ.GNxs36.ijxA50O87YSg3hA1O1kCqWwaoz6Dns4iysXXkA'
+# ── ThingSpeak ────────────────────────────────────────────────────────────────
+THINGSPEAK_URL = 'https://api.thingspeak.com/update'
+TS_KEYS = {
+    'semi_closed': 'XRHM95UX4K3FVX0J',
+    'fully_closed': 'VT7JT0U9KSCCYMTG',
+    'free_planting': 'KK2CRU2B3CKZW40C',
+    'ram':           'ENMLII2NCVO8DNZM',
 }
 
-URL_discord_ERR = 'https://discord.com/api/v9/channels/1426862416565764139/messages'
-header_ERR = {
-    "authorization": 'MTQyNjg2MTk3MDEzNjYyOTM3OA.GzNIim.AhxqZ7Qmw-fyADKUtP2pvTNUqGJiKPdgtw4-Aw'
+# ── Discord ───────────────────────────────────────────────────────────────────
+DISCORD_TOKEN   = 'MTM5OTA4Mzg2ODk4Mzc4NzU0MQ.GNxs36.ijxA50O87YSg3hA1O1kCqWwaoz6Dns4iysXXkA'
+DISCORD_TOKEN_ERR = 'MTQyNjg2MTk3MDEzNjYyOTM3OA.GzNIim.AhxqZ7Qmw-fyADKUtP2pvTNUqGJiKPdgtw4-Aw'
+DISCORD_STATUS_URL = 'https://discord.com/api/v9/channels/1409588804951605413/messages'
+DISCORD_ERROR_URL  = 'https://discord.com/api/v9/channels/1426862416565764139/messages'
+DISCORD_HEADERS     = {'authorization': DISCORD_TOKEN}
+DISCORD_ERR_HEADERS = {'authorization': DISCORD_TOKEN_ERR}
+
+# ── Intervals ─────────────────────────────────────────────────────────────────
+INTERVAL_THINGSPEAK = 120
+INTERVAL_DISCORD    = 7200
+INTERVAL_BACKUP     = 600
+INTERVAL_PING       = 3600
+
+# ── Sensor state ─────────────────────────────────────────────────────────────
+state = {
+    'hm':   [0.0, 0.0, 0.0],
+    'temp': [0.0, 0.0, 0.0],
+    'door': [0.0, 0.0, 0.0],
+    'pump': [0.0, 0.0, 0.0],
+    'ram':  [None, None, None],
 }
 
-requests.post(URL_discord, data=data, headers=header)
+# sequence counters: seq[field][pico_index]
+seq = {k: [0, 0, 0] for k in ('hm', 'temp', 'door', 'pump', 'ram')}
 
+# CSV accumulator
+backup_rows = []
+
+# ── TCP server ────────────────────────────────────────────────────────────────
+tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+tcp_server.bind((SERVER_HOST, SERVER_PORT))
+tcp_server.listen(5)
+tcp_server.setblocking(False)
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def discord_post(url, headers, content):
+    try:
+        requests.post(url, data={'content': content}, headers=headers, timeout=10)
+    except Exception as e:
+        print(f'Discord post failed: {e}')
+
+def thingspeak_send(api_key, **fields):
+    params = {'api_key': api_key}
+    params.update({f'field{i+1}': v for i, v in enumerate(fields.values())})
+    try:
+        requests.get(THINGSPEAK_URL, params=params, timeout=10)
+        print('ThingSpeak: data sent.')
+        return True
+    except Exception as e:
+        print(f'ThingSpeak error: {e}')
+        return False
+
+# ── Parse incoming line ───────────────────────────────────────────────────────
+_PREFIX_MAP = {
+    'HM1': ('hm', 0), 'HM2': ('hm', 1), 'HM3': ('hm', 2),
+    'TP1': ('temp', 0), 'TP2': ('temp', 1), 'TP3': ('temp', 2),
+    'DRRS1': ('door', 0), 'DRRS2': ('door', 1), 'DRRS3': ('door', 2),
+    'PS1': ('pump', 0), 'PS2': ('pump', 1), 'PS3': ('pump', 2),
+    'RAM1': ('ram', 0), 'RAM2': ('ram', 1), 'RAM3': ('ram', 2),
+}
+
+LABEL = {'hm': 'Humidity', 'temp': 'Temperature', 'door': 'Door status', 'pump': 'Pump status', 'ram': 'RAM usage'}
+PICO_NAME = ['first', 'second', 'third']
+
+def parse_line(line: str):
+    if ':' not in line:
+        return
+    key, _, raw = line.partition(':')
+    entry = _PREFIX_MAP.get(key.strip())
+    if entry is None:
+        return
+    field, idx = entry
+    try:
+        value = float(raw.strip())
+    except ValueError:
+        return
+    state[field][idx] = value
+    seq[field][idx] += 1
+    print(f"{seq[field][idx]}. {LABEL[field]} of {PICO_NAME[idx]} Pico: {value}")
+    print('-' * 33)
+
+# ── Async tasks ───────────────────────────────────────────────────────────────
 async def data_recv():
-    global hm1, temp1, door1, pump1 
-    global sequence_hm1, sequence_tp1, sequence_drs1, sequence_pms1
-    global sequence_hm2, sequence_tp2, sequence_drs2, sequence_pms2
-    global sequence_hm3, sequence_tp3, sequence_drs3, sequence_pms3
-    global hm2, temp2, door2, pump2
-    global hm3, temp3, door3, pump3
-    global RAM1_num, RAM2_num, RAM3_num
-    global sequence_RAM1, sequence_RAM2, sequence_RAM3
+    loop = asyncio.get_event_loop()
     while True:
-        client, addr = server.accept()
-        data = client.recv(1024)
-        data = data.decode()
-        for line in data.strip().split('\n'):
-            if line.startswith('HM1:'):
-                hm1 = float(line[4:])
-                sequence_hm1 += 1
-                print(sequence_hm1,'.','Data transfer of humidity was DONE successfully!', hm1)
-                print('---------------------------------')
-            elif line.startswith('TP1:'):
-                temp1 = float(line[4:])
-                sequence_tp1 += 1
-                print(sequence_tp1,'.','Data transfer of temperature was DONE successfully!', temp1)
-                print('---------------------------------')
-            elif line.startswith('DRRS1:'):
-                door1 = float(line[6:])
-                sequence_drs1 += 1
-                print(sequence_drs1,'.','Data transfer of door status was DONE successfully!', door1)
-                print('---------------------------------')
-            elif line.startswith('PS1:'):
-                pump1 = float(line[4:])
-                sequence_pms1 += 1
-                print(sequence_pms1,'.','Data transfer of pump status was DONE successfully!', pump1)
-                print('---------------------------------')
-            elif line.startswith('HM2:'):
-                hm2 = float(line[4:])
-                sequence_hm2 += 1
-                print(sequence_hm2,'.','Data transfer of humidity was DONE successfully 2!', hm2)
-                print('---------------------------------')
-            elif line.startswith('TP2:'):
-                temp2 = float(line[4:])
-                sequence_tp2 += 1
-                print(sequence_tp2,'.','Data transfer of temperature was DONE successfully 2!', temp2)
-                print('---------------------------------')
-            elif line.startswith('DRRS2:'):
-                door2 = float(line[6:])
-                sequence_drs2 += 1
-                print(sequence_drs2,'.','Data transfer of door status was DONE successfully 2!', door2)
-                print('---------------------------------')
-            elif line.startswith('PS2:'):
-                pump2 = float(line[4:])
-                sequence_pms2 += 1
-                print(sequence_pms2,'.','Data transfer of pump status was DONE successfully 2!', pump2)
-                print('---------------------------------')
-            elif line.startswith('HM3:'):
-                hm3 = float(line[4:])
-                sequence_hm3 += 1
-                print(sequence_hm3,'.','Data transfer of humidity status was DONE successfully 3!', hm3)
-                print('---------------------------------')
-            elif line.startswith('TP3:'):
-                temp3 = float(line[4:])
-                sequence_tp3 += 1
-                print(sequence_tp3,'.','Data transfer of temperature was DONE successfully 3!', temp3)
-                print('---------------------------------')
-            elif line.startswith('DRRS3:'):
-                door3 = float(line[6:])
-                sequence_drs3 += 1
-                print(sequence_drs3,'.','Data transfer of door status was DONE successfully 3!', door3)
-                print('---------------------------------')
-            elif line.startswith('PS3:'):
-                pump3 = float(line[4:])
-                sequence_pms3 += 1
-                print(sequence_pms3,'.','Data transfer of pump status was DONE successfully 3!', pump3)
-                print('---------------------------------')
-            elif line.startswith('RAM1:'):
-                RAM1_num = float(line[5:])
-                sequence_RAM1 += 1
-                print(sequence_RAM1,'.','RAM usage of first RPI pico is:', RAM1_num,'%')
-                print('---------------------------------')
-            elif line.startswith('RAM2:'):
-                RAM2_num = float(line[5:])
-                sequence_RAM2 += 1
-                print(sequence_RAM2,'.','RAM usage of second RPI pico is:', RAM2_num,'%')
-                print('---------------------------------')
-            elif line.startswith('RAM3:'):
-                RAM3_num = float(line[5:])
-                sequence_RAM3 += 1
-                print(sequence_RAM3,'.','RAM usage of third RPI pico is:', RAM3_num,'%')
-                print('---------------------------------')
-        await asyncio.sleep(0.2)
+        try:
+            client, addr = await loop.sock_accept(tcp_server)
+            data = await loop.sock_recv(client, 4096)
+            client.close()
+            for line in data.decode(errors='ignore').strip().split('\n'):
+                parse_line(line)
+        except Exception as e:
+            print(f'data_recv error: {e}')
+        await asyncio.sleep(0)
 
-async def control_RPI():
-    global client1_IP, client2_IP, client3_IP
-    global URL_discord_ERR, header_ERR
-    while True:
-        ping1 = os.system(f"ping -c 1 {client1_IP} > /dev/null 2>&1")
-        if ping1 == 0:
-            print('First RPI pico is ONLINE')
-            print('---------------------------------')
-        else:
-            print('First RPI pico is OFLLINE!!!!!!! Please check connection!!!!!!!')
-            print('---------------------------------')
-        await asyncio.sleep(3600)       
-
-async def control_RPI2():
-    global client1_IP, client2_IP, client3_IP
-    global URL_discord_ERR, header_ERR
-    while True:
-        ping2 = os.system(f"ping -c 1 {client2_IP} > /dev/null 2>&1")
-        if ping2 == 0:
-            print('Second RPI pico is ONLINE')
-            print('---------------------------------')
-        else:
-            print('Second RPI pico is OFLLINE!!!!!!! Please check connection!!!!!!!')
-            print('---------------------------------')
-        await asyncio.sleep(3600)  
-
-async def control_RPI3():
-    global client1_IP, client2_IP, client3_IP
-    global URL_discord_ERR, header_ERR
-    while True:
-        ping3 = os.system(f"ping -c 1 {client3_IP} > /dev/null 2>&1")
-        if ping3 == 0:
-            print('Third RPI pico is ONLINE')
-            print('---------------------------------')
-        else:
-            print('Third RPI pico is OFLLINE!!!!!!! Please check connection!!!!!!!')
-            print('---------------------------------')
-        await asyncio.sleep(3600) 
 
 async def data_send():
-    global hm1, temp1, door1, pump1, response, response2, response3, response4
-    global RAM1_num, RAM2_num, RAM3_num, requests
-    global URL, API1, API2, API3, API_RAM
-    global data, header, header_ERR, URL_discord, URL_discord_ERR
+    await asyncio.sleep(INTERVAL_THINGSPEAK)
     while True:
-        try:
-            response = requests.get(f"{URL}?api_key={API1}&field1={hm1}&field2={temp1}&field3={door1}&field4={pump1}")
-            print('Data was send!!')
-            print('---------------------------------')
-        except Exception as e:
-            print('Error appaers when sending data! System control is necessary! - SEMI closed greenhouse')
-            print('---------------------------------')
-            data = {
-                "content": "@simon9104 ERROR appears when sending data to THINGSPEAK - SEMI closed greenhouse"
-            }
-            requests.post(URL_discord_ERR, data=data, headers=header_ERR)
-        try:
-            response2 = requests.get(f"{URL}?api_key={API2}&field1={hm2}&field2={temp2}&field3={door2}&field4={pump2}")
-            print('Data was send!!')
-            print('---------------------------------')
-        except Exception as e:
-            print('Error appaers when sending data! System control is necessary! - Fully closed greenhouse')
-            print('---------------------------------')
-            data = {
-                "content": "@simon9104 ERROR appears when sending data to THINGSPEAK - Fully closed greenhouse"
-            }
-            requests.post(URL_discord_ERR, data=data, headers=header_ERR)
-        try:
-            response3 = requests.get(f"{URL}?api_key={API3}&field1={hm3}&field2={temp3}&field3={door3}&field4={pump3}")
-            print('Data was send!!')
-            print('---------------------------------')
-        except Exception as e:
-            print('Error appaers when sending data! System control is necessary! - free planting')
-            print('---------------------------------')
-            data = {
-                "content": "@simon9104 ERROR appears when sending data to THINGSPEAK - free planting"
-            }
-            requests.post(URL_discord_ERR, data=data, headers=header_ERR)
-        try:
-            response4 = requests.get(f"{URL}?api_key={API_RAM}&field1={RAM1_num}&field2={RAM2_num}&field3={RAM3_num}")
-            print('Data was send!!')
-            print('---------------------------------')
-        except Exception as e:
-            print('Error appaers when sending data! System control is necessary! - RAM information')
-            print('---------------------------------')
-            data = {
-                "content": "@simon9104 ERROR appears when sending data to THINGSPEAK - RAM information"
-        }
-            requests.post(URL_discord_ERR, data=data, headers=header_ERR)
-        await asyncio.sleep(120)
+        channels = [
+            ('semi_closed',  'hm', 'temp', 'door', 'pump', 0),
+            ('fully_closed', 'hm', 'temp', 'door', 'pump', 1),
+            ('free_planting','hm', 'temp', 'door', 'pump', 2),
+        ]
+        names = ['Semi-Closed', 'Fully-Closed', 'Free Planting']
+        for (ch, *fields, i), name in zip(channels, names):
+            ok = thingspeak_send(TS_KEYS[ch],
+                                 hm=state['hm'][i],
+                                 temp=state['temp'][i],
+                                 door=state['door'][i],
+                                 pump=state['pump'][i])
+            if not ok:
+                discord_post(DISCORD_ERROR_URL, DISCORD_ERR_HEADERS,
+                             f'@simon9104 ERROR sending to ThingSpeak — {name}')
+
+        ok_ram = thingspeak_send(TS_KEYS['ram'],
+                                 r1=state['ram'][0],
+                                 r2=state['ram'][1],
+                                 r3=state['ram'][2])
+        if not ok_ram:
+            discord_post(DISCORD_ERROR_URL, DISCORD_ERR_HEADERS,
+                         '@simon9104 ERROR sending to ThingSpeak — RAM')
+
+        await asyncio.sleep(INTERVAL_THINGSPEAK)
+
 
 async def transfer_discord():
-    global hm1, header, data, RAM1_num, RAM2_num, RAM3_num, requests
+    await asyncio.sleep(INTERVAL_DISCORD)
     while True:
-        data = {
-            "content": f"Data usage of first RPI pico is: {RAM1_num} \nData usage of second RPI pico is: {RAM2_num} \nData usage of second RPI pico is: {RAM3_num}" 
-        }
-        requests.post(URL_discord, data=data, headers=header)
-        print('Discord massage was send!!')
-        print('---------------------------------')
-        await asyncio.sleep(7200)
+        r = state['ram']
+        msg = (f'RAM usage — Pico 1: {r[0]}%  |  '
+               f'Pico 2: {r[1]}%  |  '
+               f'Pico 3: {r[2]}%')
+        discord_post(DISCORD_STATUS_URL, DISCORD_HEADERS, msg)
+        print('Discord status message sent.')
+        print('-' * 33)
+        await asyncio.sleep(INTERVAL_DISCORD)
+
 
 async def backup_data():
-    global hm1, hm2, hm3
-    global temp1, temp2, temp3
-    global door1, door2, door3
-    global pump1, pump2, pump3
-    results = []
+    await asyncio.sleep(INTERVAL_BACKUP)
     while True:
-        now = datetime.datetime.now()
-        data = {
-            'Time': now.strftime("%Y-%m-%d %H:%M:%S"),
-            'Humidity SC': hm1,
-            'TP SC': temp1,
-            'DRRS SC': door1,
-            'PS SC': pump1,
-            'HM C': hm2,
-            'TP C': temp2,
-            'DRRS C': door2,
-            'PS C': pump2,
-            'HM FREE': hm3,
-            'TP FREE': temp3,
-            'DRRS FREE': door3,
-            'PS FREE': pump3
+        row = {
+            'Time':        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'Humidity SC': state['hm'][0],   'TP SC':   state['temp'][0],
+            'DRRS SC':     state['door'][0],  'PS SC':   state['pump'][0],
+            'HM C':        state['hm'][1],    'TP C':    state['temp'][1],
+            'DRRS C':      state['door'][1],  'PS C':    state['pump'][1],
+            'HM FREE':     state['hm'][2],    'TP FREE': state['temp'][2],
+            'DRRS FREE':   state['door'][2],  'PS FREE': state['pump'][2],
         }
-        results.append(data)
-        df = pd.DataFrame(results)
-        df.to_csv('backup_data_server.csv', index=False)
-        print('Backup data was saved successfully!!')
-        print('---------------------------------')
-        await asyncio.sleep(600)
+        backup_rows.append(row)
+        pd.DataFrame(backup_rows).to_csv('backup_data_server.csv', index=False)
+        print('Backup saved.')
+        print('-' * 33)
+        await asyncio.sleep(INTERVAL_BACKUP)
+
+
+async def ping_pico(index: int):
+    ip = PICO_IPS[index + 1]
+    name = PICO_NAME[index].capitalize()
+    while True:
+        result = os.system(f'ping -c 1 {ip} > /dev/null 2>&1')
+        status = 'ONLINE' if result == 0 else 'OFFLINE — check connection!'
+        print(f'{name} Pico ({ip}): {status}')
+        print('-' * 33)
+        await asyncio.sleep(INTERVAL_PING)
+
 
 async def main():
-    asyncio.create_task(data_recv())
-    asyncio.create_task(data_send())
-    asyncio.create_task(transfer_discord())
-    asyncio.create_task(backup_data())
-    asyncio.create_task(control_RPI())
-    asyncio.create_task(control_RPI2())
-    asyncio.create_task(control_RPI3())
-    while True:
-        await control_RPI()
-        await control_RPI2()
-        await control_RPI3()
-        print('program is running!')
-        await asyncio.sleep(120)
+    os.system('clear')
+    print('System started successfully!')
+
+    discord_post(DISCORD_STATUS_URL, DISCORD_HEADERS, 'Server v5 started.')
+
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(data_recv())
+        tg.create_task(data_send())
+        tg.create_task(transfer_discord())
+        tg.create_task(backup_data())
+        for i in range(3):
+            tg.create_task(ping_pico(i))
+
 
 asyncio.run(main())
