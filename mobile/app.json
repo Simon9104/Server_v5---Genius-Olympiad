@@ -16,8 +16,12 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.greeniot.monitor",
+      "buildNumber": "1",
       "infoPlist": {
-        "UIBackgroundModes": ["fetch", "remote-notification"]
+        "UIBackgroundModes": ["fetch", "remote-notification"],
+        "NSLocalNetworkUsageDescription": "GreenIOT connects to your local greenhouse server to read sensor data.",
+        "UIRequiresFullScreen": false
       }
     },
     "android": {
