@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Greenhouse IoT Server — Genius Olympiad</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --card: #1c2128;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav .logo {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    nav .logo svg { width: 22px; height: 22px; }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: .9rem;
+      transition: color .2s;
+    }
+    nav a:hover { color: var(--text); }
+    nav .badge {
+      margin-left: auto;
+      background: #1a3a1a;
+      color: var(--green);
+      border: 1px solid var(--green);
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #0d1117 0%, #1a2233 50%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .75rem;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 600px;
+      margin: 0 auto 1.5rem;
+    }
+    .hero .meta {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      font-size: .85rem;
+      color: var(--muted);
+    }
+    .hero .meta span { display: flex; align-items: center; gap: .3rem; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 3rem 1.5rem; }
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .section-title .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    section { margin-bottom: 3.5rem; }
+
+    /* ── PICO CARDS ── */
+    .pico-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .pico-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      transition: border-color .2s;
+    }
+    .pico-card:hover { border-color: var(--accent); }
+    .pico-card .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .pico-card .title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+    }
+    .pico-card .ip {
+      font-size: .78rem;
+      color: var(--muted);
+      font-family: monospace;
+      background: var(--surface);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .pico-card .badge-type {
+      display: inline-block;
+      font-size: .72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-bottom: .75rem;
+    }
+    .badge-semi { background: #1a2f3a; color: #58c8ff; border: 1px solid #58c8ff44; }
+    .badge-full { background: #1a3a2a; color: var(--green); border: 1px solid #3fb95044; }
+    .badge-free { background: #2a2a1a; color: #e3c16f; border: 1px solid #d2992244; }
+
+    .sensor-list { list-style: none; }
+    .sensor-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #21272e;
+      font-size: .88rem;
+    }
+    .sensor-list li:last-child { border-bottom: none; }
+    .sensor-list .key { color: var(--muted); }
+    .sensor-list .val {
+      font-family: monospace;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── DATA FLOW DIAGRAM ── */
+    .flow-diagram {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 2rem;
+      overflow-x: auto;
+    }
+    .flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: nowrap;
+      min-width: 680px;
+    }
+    .flow-node {
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .flow-box {
+      border-radius: 8px;
+      padding: .6rem 1rem;
+      font-size: .82rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .flow-sub { font-size: .7rem; color: var(--muted); margin-top: 3px; font-weight: 400; }
+    .box-pico { background: #1a2f3a; color: #58c8ff; border: 1px solid #58c8ff55; }
+    .box-server { background: #1e1a3a; color: var(--purple); border: 1px solid #bc8cff55; }
+    .box-ts { background: #1a3a1a; color: var(--green); border: 1px solid #3fb95055; }
+    .box-discord { background: #2a1a3a; color: #b39ddb; border: 1px solid #b39ddb55; }
+    .box-csv { background: #2a2a1a; color: var(--yellow); border: 1px solid #d2992255; }
+    .arrow {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 .5rem;
+    }
+    .arrow .line {
+      width: 40px;
+      height: 2px;
+      background: var(--border);
+      position: relative;
+    }
+    .arrow .line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      border: 5px solid transparent;
+      border-left: 8px solid var(--border);
+    }
+    .arrow .label { font-size: .68rem; color: var(--muted); margin-bottom: 3px; }
+
+    /* Multi-destination arrows */
+    .flow-split {
+      display: flex;
+      flex-direction: column;
+      gap: .8rem;
+      padding: 0 .5rem;
+    }
+    .split-arrow {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+    }
+    .split-line {
+      width: 35px; height: 2px;
+      background: var(--border);
+      position: relative;
+    }
+    .split-line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      border: 5px solid transparent;
+      border-left: 8px solid var(--border);
+    }
+    .split-label { font-size: .68rem; color: var(--muted); }
+
+    /* ── PROTOCOL TABLE ── */
+    .proto-table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+    th {
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+      padding: .6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: .6rem 1rem;
+      border-bottom: 1px solid #21272e;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1c2128; }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: .85em;
+      color: var(--accent);
+    }
+    .tag {
+      display: inline-block;
+      font-size: .72rem;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 8px;
+    }
+    .tag-hm  { background: #1a2f3a; color: #58c8ff; }
+    .tag-tp  { background: #3a1a1a; color: #ff7b7b; }
+    .tag-dr  { background: #2a2a1a; color: var(--yellow); }
+    .tag-ps  { background: #1a3a2a; color: var(--green); }
+    .tag-ram { background: #2a1a3a; color: var(--purple); }
+
+    /* ── TASKS TABLE ── */
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .task-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem;
+    }
+    .task-card .t-name {
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--accent);
+      margin-bottom: .3rem;
+    }
+    .task-card .t-interval {
+      font-size: .78rem;
+      color: var(--yellow);
+      font-family: monospace;
+      margin-bottom: .6rem;
+    }
+    .task-card .t-desc {
+      font-size: .84rem;
+      color: var(--muted);
+    }
+
+    /* ── TIMELINE ── */
+    .timeline { position: relative; padding-left: 2rem; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 6px;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .tl-item {
+      position: relative;
+      margin-bottom: 1.4rem;
+    }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -1.75rem;
+      top: 6px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .tl-item .tl-time {
+      font-size: .78rem;
+      color: var(--accent);
+      font-family: monospace;
+      font-weight: 700;
+    }
+    .tl-item .tl-text {
+      font-size: .9rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── CSV SCHEMA ── */
+    .csv-cols {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-top: .5rem;
+    }
+    .col-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: .8rem;
+      font-family: monospace;
+      color: var(--text);
+    }
+    .col-pill span { color: var(--muted); font-size: .72rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    Greenhouse IoT Server
+  </div>
+  <a href="#devices">Devices</a>
+  <a href="#dataflow">Data Flow</a>
+  <a href="#protocol">Protocol</a>
+  <a href="#tasks">Tasks</a>
+  <a href="#schema">CSV Schema</a>
+  <div class="badge">● LIVE v5</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Greenhouse IoT Monitoring Server</h1>
+  <p>Centralized data aggregation for three greenhouse environments — collecting sensor readings, forwarding to the cloud, and alerting in real time.</p>
+  <div class="meta">
+    <span>🌱 Genius Olympiad 2025</span>
+    <span>👤 Simon Onderisin</span>
+    <span>🐍 Python asyncio</span>
+    <span>🔌 TCP :9991</span>
+    <span>☁️ ThingSpeak + Discord</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- PICO DEVICES -->
+  <section id="devices">
+    <div class="section-title"><span class="dot"></span> Raspberry Pi Pico Devices</div>
+    <div class="pico-grid">
+
+      <div class="pico-card">
+        <div class="header">
+          <div class="title">Pico 1</div>
+          <div class="ip">192.168.1.59</div>
+        </div>
+        <div class="badge-type badge-semi">Semi-Closed Greenhouse</div>
+        <ul class="sensor-list">
+          <li><span class="key">Humidity</span><span class="val">HM1:</span></li>
+          <li><span class="key">Temperature</span><span class="val">TP1:</span></li>
+          <li><span class="key">Door / Relay</span><span class="val">DRRS1:</span></li>
+          <li><span class="key">Pump Status</span><span class="val">PS1:</span></li>
+          <li><span class="key">RAM Usage</span><span class="val">RAM1:</span></li>
+          <li><span class="key">ThingSpeak Channel</span><span class="val">API1</span></li>
+        </ul>
+      </div>
+
+      <div class="pico-card">
+        <div class="header">
+          <div class="title">Pico 2</div>
+          <div class="ip">192.168.1.118</div>
+        </div>
+        <div class="badge-type badge-full">Fully-Closed Greenhouse</div>
+        <ul class="sensor-list">
+          <li><span class="key">Humidity</span><span class="val">HM2:</span></li>
+          <li><span class="key">Temperature</span><span class="val">TP2:</span></li>
+          <li><span class="key">Door / Relay</span><span class="val">DRRS2:</span></li>
+          <li><span class="key">Pump Status</span><span class="val">PS2:</span></li>
+          <li><span class="key">RAM Usage</span><span class="val">RAM2:</span></li>
+          <li><span class="key">ThingSpeak Channel</span><span class="val">API2</span></li>
+        </ul>
+      </div>
+
+      <div class="pico-card">
+        <div class="header">
+          <div class="title">Pico 3</div>
+          <div class="ip">192.168.1.118</div>
+        </div>
+        <div class="badge-type badge-free">Free Planting Area</div>
+        <ul class="sensor-list">
+          <li><span class="key">Humidity</span><span class="val">HM3:</span></li>
+          <li><span class="key">Temperature</span><span class="val">TP3:</span></li>
+          <li><span class="key">Door / Relay</span><span class="val">DRRS3:</span></li>
+          <li><span class="key">Pump Status</span><span class="val">PS3:</span></li>
+          <li><span class="key">RAM Usage</span><span class="val">RAM3:</span></li>
+          <li><span class="key">ThingSpeak Channel</span><span class="val">API3</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- DATA FLOW -->
+  <section id="dataflow">
+    <div class="section-title"><span class="dot"></span> Data Flow Architecture</div>
+    <div class="flow-diagram">
+      <div class="flow">
+
+        <!-- Picos -->
+        <div class="flow-node">
+          <div class="flow-box box-pico" style="margin-bottom:.5rem">Pico 1</div>
+          <div class="flow-box box-pico" style="margin-bottom:.5rem">Pico 2</div>
+          <div class="flow-box box-pico">Pico 3</div>
+          <div class="flow-sub">TCP clients</div>
+        </div>
+
+        <!-- Arrow → Server -->
+        <div class="arrow">
+          <div class="label">TCP :9991</div>
+          <div class="line"></div>
+        </div>
+
+        <!-- Server -->
+        <div class="flow-node">
+          <div class="flow-box box-server">Python Server</div>
+          <div class="flow-sub">asyncio · 7 tasks</div>
+        </div>
+
+        <!-- Split arrows -->
+        <div class="flow-split">
+          <div class="split-arrow">
+            <div class="split-line"></div>
+            <span class="split-label">every 2 min</span>
+          </div>
+          <div class="split-arrow">
+            <div class="split-line"></div>
+            <span class="split-label">every 2 hr</span>
+          </div>
+          <div class="split-arrow">
+            <div class="split-line"></div>
+            <span class="split-label">every 10 min</span>
+          </div>
+        </div>
+
+        <!-- Destinations -->
+        <div class="flow-node">
+          <div class="flow-box box-ts" style="margin-bottom:.5rem">ThingSpeak</div>
+          <div class="flow-box box-discord" style="margin-bottom:.5rem">Discord</div>
+          <div class="flow-box box-csv">CSV Backup</div>
+          <div class="flow-sub">cloud · chat · local</div>
+        </div>
+
+      </div>
+
+      <!-- Legend -->
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.8rem;">
+        <span style="color:#58c8ff">■ Pico Devices</span>
+        <span style="color:var(--purple)">■ Python Server</span>
+        <span style="color:var(--green)">■ ThingSpeak Cloud</span>
+        <span style="color:#b39ddb">■ Discord Alerts</span>
+        <span style="color:var(--yellow)">■ CSV Backup</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROTOCOL -->
+  <section id="protocol">
+    <div class="section-title"><span class="dot"></span> TCP Data Protocol</div>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:1rem;">
+      Each Pico connects to <code>0.0.0.0:9991</code> and sends plain-text key-value pairs (one per line).
+      The server parses every line and updates the corresponding global variable.
+    </p>
+    <div class="proto-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Prefix</th>
+            <th>Type</th>
+            <th>Unit / Values</th>
+            <th>Example</th>
+            <th>Applies to</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>HM1:</code> <code>HM2:</code> <code>HM3:</code></td>
+            <td><span class="tag tag-hm">Humidity</span></td>
+            <td>Float, %</td>
+            <td><code>HM1:65.5</code></td>
+            <td>All 3 Picos</td>
+          </tr>
+          <tr>
+            <td><code>TP1:</code> <code>TP2:</code> <code>TP3:</code></td>
+            <td><span class="tag tag-tp">Temperature</span></td>
+            <td>Float, °C</td>
+            <td><code>TP2:22.3</code></td>
+            <td>All 3 Picos</td>
+          </tr>
+          <tr>
+            <td><code>DRRS1:</code> <code>DRRS2:</code> <code>DRRS3:</code></td>
+            <td><span class="tag tag-dr">Door / Relay</span></td>
+            <td>Float, 0 or 1</td>
+            <td><code>DRRS1:1</code></td>
+            <td>All 3 Picos</td>
+          </tr>
+          <tr>
+            <td><code>PS1:</code> <code>PS2:</code> <code>PS3:</code></td>
+            <td><span class="tag tag-ps">Pump Status</span></td>
+            <td>Float, 0 or 1</td>
+            <td><code>PS3:0</code></td>
+            <td>All 3 Picos</td>
+          </tr>
+          <tr>
+            <td><code>RAM1:</code> <code>RAM2:</code> <code>RAM3:</code></td>
+            <td><span class="tag tag-ram">RAM Usage</span></td>
+            <td>Float, %</td>
+            <td><code>RAM1:45.2</code></td>
+            <td>All 3 Picos</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:1.5rem">
+      <div class="section-title" style="font-size:1rem;margin-bottom:1rem;"><span class="dot" style="background:var(--green)"></span> ThingSpeak Channel Mapping</div>
+      <div class="proto-table-wrap">
+        <table>
+          <thead>
+            <tr><th>API Key Variable</th><th>Channel</th><th>Field 1</th><th>Field 2</th><th>Field 3</th><th>Field 4</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>API1</code></td>
+              <td>Semi-Closed GH</td>
+              <td>HM1 — Humidity</td>
+              <td>TP1 — Temp</td>
+              <td>DRRS1 — Door</td>
+              <td>PS1 — Pump</td>
+            </tr>
+            <tr>
+              <td><code>API2</code></td>
+              <td>Fully-Closed GH</td>
+              <td>HM2 — Humidity</td>
+              <td>TP2 — Temp</td>
+              <td>DRRS2 — Door</td>
+              <td>PS2 — Pump</td>
+            </tr>
+            <tr>
+              <td><code>API3</code></td>
+              <td>Free Planting</td>
+              <td>HM3 — Humidity</td>
+              <td>TP3 — Temp</td>
+              <td>DRRS3 — Door</td>
+              <td>PS3 — Pump</td>
+            </tr>
+            <tr>
+              <td><code>API_RAM</code></td>
+              <td>Device Health</td>
+              <td>RAM1 %</td>
+              <td>RAM2 %</td>
+              <td>RAM3 %</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ASYNC TASKS -->
+  <section id="tasks">
+    <div class="section-title"><span class="dot"></span> Async Task Architecture</div>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:1.25rem;">
+      The server runs 7 concurrent <code>asyncio</code> tasks inside a single Python process.
+    </p>
+    <div class="task-grid">
+
+      <div class="task-card">
+        <div class="t-name">data_recv()</div>
+        <div class="t-interval">⏱ Continuous (0.2 s delay)</div>
+        <div class="t-desc">TCP socket listener. Accepts incoming connections from any Pico on port 9991, decodes the payload, parses each line, and updates global sensor variables. Increments a per-sensor sequence counter on every successful parse.</div>
+      </div>
+
+      <div class="task-card">
+        <div class="t-name">data_send()</div>
+        <div class="t-interval">⏱ Every 120 seconds</div>
+        <div class="t-desc">Sends current sensor values to ThingSpeak via HTTPS GET for all four channels (3 greenhouse channels + 1 RAM channel). On failure, posts an error alert to the Discord error channel.</div>
+      </div>
+
+      <div class="task-card">
+        <div class="t-name">transfer_discord()</div>
+        <div class="t-interval">⏱ Every 7200 seconds (2 hr)</div>
+        <div class="t-desc">Posts a RAM usage summary for all three Pico devices to the main Discord status channel. Allows remote monitoring of device health without SSH access.</div>
+      </div>
+
+      <div class="task-card">
+        <div class="t-name">backup_data()</div>
+        <div class="t-interval">⏱ Every 600 seconds (10 min)</div>
+        <div class="t-desc">Appends the current sensor snapshot (timestamp + all 12 readings) to an in-memory list and writes the entire list to <code>backup_data_server.csv</code> using pandas.</div>
+      </div>
+
+      <div class="task-card">
+        <div class="t-name">control_RPI()</div>
+        <div class="t-interval">⏱ Every 3600 seconds (1 hr)</div>
+        <div class="t-desc">Pings Pico 1 at <code>192.168.1.59</code> using the system ping command. Prints ONLINE / OFFLINE to the console. Helps detect network outages early.</div>
+      </div>
+
+      <div class="task-card">
+        <div class="t-name">control_RPI2() &amp; control_RPI3()</div>
+        <div class="t-interval">⏱ Every 3600 seconds (1 hr)</div>
+        <div class="t-desc">Same as control_RPI() but for Pico 2 and Pico 3 at <code>192.168.1.118</code>. Each runs as an independent task so one slow ping doesn't block the others.</div>
+      </div>
+
+    </div>
+
+    <!-- Timeline -->
+    <div style="margin-top:2rem">
+      <div class="section-title" style="font-size:1rem;margin-bottom:1rem;"><span class="dot" style="background:var(--yellow)"></span> Operational Timeline</div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-time">T + 0 s — Startup</div>
+          <div class="tl-text">Server binds TCP :9991, initialises all globals to 0, posts "Program was started" to Discord main channel.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-time">T + 120 s — First ThingSpeak push</div>
+          <div class="tl-text">All four ThingSpeak channels updated with the first batch of sensor data. Heartbeat "program is running!" printed to console.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-time">T + 600 s — First CSV backup</div>
+          <div class="tl-text">Current snapshot written to <code>backup_data_server.csv</code>. File accumulates rows every 10 minutes until the process restarts.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-time">T + 3600 s — First device ping</div>
+          <div class="tl-text">All three Pico devices pinged; online/offline status logged to console.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-time">T + 7200 s — First Discord RAM report</div>
+          <div class="tl-text">RAM usage summary for Pico 1, 2, and 3 posted to the Discord status channel.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-time">Ongoing — Continuous reception</div>
+          <div class="tl-text">data_recv() loops indefinitely, accepting and processing each incoming TCP connection from any Pico device.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CSV SCHEMA -->
+  <section id="schema">
+    <div class="section-title"><span class="dot"></span> CSV Backup Schema</div>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:1rem;">
+      File: <code>backup_data_server.csv</code> — written every 10 minutes. Each row is a full sensor snapshot at that timestamp.
+    </p>
+    <div class="proto-table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Column</th><th>Source Variable</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>Time</code></td><td><code>datetime.now()</code></td><td>Timestamp — YYYY-MM-DD HH:MM:SS</td></tr>
+          <tr><td>2</td><td><code>Humidity SC</code></td><td><code>hm1</code></td><td>Humidity — Semi-Closed GH (%)</td></tr>
+          <tr><td>3</td><td><code>TP SC</code></td><td><code>temp1</code></td><td>Temperature — Semi-Closed GH (°C)</td></tr>
+          <tr><td>4</td><td><code>DRRS SC</code></td><td><code>door1</code></td><td>Door/Relay Status — Semi-Closed (0/1)</td></tr>
+          <tr><td>5</td><td><code>PS SC</code></td><td><code>pump1</code></td><td>Pump Status — Semi-Closed (0/1)</td></tr>
+          <tr><td>6</td><td><code>HM C</code></td><td><code>hm2</code></td><td>Humidity — Fully-Closed GH (%)</td></tr>
+          <tr><td>7</td><td><code>TP C</code></td><td><code>temp2</code></td><td>Temperature — Fully-Closed GH (°C)</td></tr>
+          <tr><td>8</td><td><code>DRRS C</code></td><td><code>door2</code></td><td>Door/Relay Status — Fully-Closed (0/1)</td></tr>
+          <tr><td>9</td><td><code>PS C</code></td><td><code>pump2</code></td><td>Pump Status — Fully-Closed (0/1)</td></tr>
+          <tr><td>10</td><td><code>HM FREE</code></td><td><code>hm3</code></td><td>Humidity — Free Planting Area (%)</td></tr>
+          <tr><td>11</td><td><code>TP FREE</code></td><td><code>temp3</code></td><td>Temperature — Free Planting Area (°C)</td></tr>
+          <tr><td>12</td><td><code>DRRS FREE</code></td><td><code>door3</code></td><td>Door/Relay Status — Free Planting (0/1)</td></tr>
+          <tr><td>13</td><td><code>PS FREE</code></td><td><code>pump3</code></td><td>Pump Status — Free Planting (0/1)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:1.5rem">
+      <div class="section-title" style="font-size:1rem;margin-bottom:.8rem;"><span class="dot" style="background:var(--purple)"></span> All column names at a glance</div>
+      <div class="csv-cols">
+        <div class="col-pill">Time <span>timestamp</span></div>
+        <div class="col-pill">Humidity SC <span>hm1</span></div>
+        <div class="col-pill">TP SC <span>temp1</span></div>
+        <div class="col-pill">DRRS SC <span>door1</span></div>
+        <div class="col-pill">PS SC <span>pump1</span></div>
+        <div class="col-pill">HM C <span>hm2</span></div>
+        <div class="col-pill">TP C <span>temp2</span></div>
+        <div class="col-pill">DRRS C <span>door2</span></div>
+        <div class="col-pill">PS C <span>pump2</span></div>
+        <div class="col-pill">HM FREE <span>hm3</span></div>
+        <div class="col-pill">TP FREE <span>temp3</span></div>
+        <div class="col-pill">DRRS FREE <span>door3</span></div>
+        <div class="col-pill">PS FREE <span>pump3</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Greenhouse IoT Server v5 &mdash; &copy; 2025 Simon Onderisin. All rights reserved. &nbsp;|&nbsp;
+  Genius Olympiad Project &nbsp;|&nbsp;
+  Built with Python asyncio &amp; Raspberry Pi Pico
+</footer>
+
+</body>
+</html>
