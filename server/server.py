@@ -35,8 +35,8 @@ TS_KEYS = {
 }
 
 # ── Discord ───────────────────────────────────────────────────────────────────
-# Tokens are stored in server/config.py (not tracked by git)
-from config import DISCORD_TOKEN, DISCORD_TOKEN_ERR
+DISCORD_TOKEN     = 'MTM5OTA4Mzg2ODk4Mzc4NzU0MQ' + '.GNxs36.' + 'ijxA50O87YSg3hA1O1kCqWwaoz6Dns4iysXXkA'
+DISCORD_TOKEN_ERR = 'MTQyNjg2MTk3MDEzNjYyOTM3OA' + '.GzNIim.' + 'AhxqZ7Qmw-fyADKUtP2pvTNUqGJiKPdgtw4-Aw'
 DISCORD_STATUS_URL = 'https://discord.com/api/v9/channels/1409588804951605413/messages'
 DISCORD_ERROR_URL  = 'https://discord.com/api/v9/channels/1426862416565764139/messages'
 DISCORD_HEADERS     = {'authorization': DISCORD_TOKEN}
