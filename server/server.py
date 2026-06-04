@@ -39,8 +39,8 @@ DISCORD_TOKEN     = 'MTM5OTA4Mzg2ODk4Mzc4NzU0MQ' + '.GNxs36.' + 'ijxA50O87YSg3hA
 DISCORD_TOKEN_ERR = 'MTQyNjg2MTk3MDEzNjYyOTM3OA' + '.GzNIim.' + 'AhxqZ7Qmw-fyADKUtP2pvTNUqGJiKPdgtw4-Aw'
 DISCORD_STATUS_URL = 'https://discord.com/api/v9/channels/1409588804951605413/messages'
 DISCORD_ERROR_URL  = 'https://discord.com/api/v9/channels/1426862416565764139/messages'
-DISCORD_HEADERS     = {'authorization': DISCORD_TOKEN}
-DISCORD_ERR_HEADERS = {'authorization': DISCORD_TOKEN_ERR}
+DISCORD_HEADERS     = {'authorization': 'Bot ' + DISCORD_TOKEN}
+DISCORD_ERR_HEADERS = {'authorization': 'Bot ' + DISCORD_TOKEN_ERR}
 
 # ── Intervals (seconds) ───────────────────────────────────────────────────────
 INTERVAL_THINGSPEAK = 120
@@ -133,12 +133,14 @@ async def http_get(session: aiohttp.ClientSession, url: str, params: dict) -> bo
     return False
 
 async def http_post(session: aiohttp.ClientSession, url: str, headers: dict, content: str) -> None:
+    merged = {**headers, 'Content-Type': 'application/json'}
     for attempt, delay in enumerate(RETRY_BACKOFF, 1):
         try:
-            async with session.post(url, data={'content': content},
-                                    headers=headers, timeout=HTTP_TIMEOUT) as resp:
+            async with session.post(url, json={'content': content},
+                                    headers=merged, timeout=HTTP_TIMEOUT) as resp:
                 if resp.status in (200, 204):
                     return
+                print(f'Discord POST status {resp.status}: {await resp.text()}')
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f'HTTP POST attempt {attempt}/{MAX_RETRIES} failed: {e}')
             if attempt < MAX_RETRIES:
