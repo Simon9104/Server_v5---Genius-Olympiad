@@ -13,4 +13,3 @@ sleep(0.5)
 pumpa.high()
 print('OK')
 print('Prajem vsetkym vesle a statsne vianoce nech sa vsetkym dari')
-
