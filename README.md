@@ -1,4 +1,4 @@
-# Greenhouse IoT Monitoring Server v5
+# GreenIOT — Greenhouse Monitoring Server v5
 
 > **Genius Olympiad 2026** — Simon Onderisin  
 > Centralized IoT server for three greenhouse environments using Raspberry Pi Pico W devices.
@@ -226,4 +226,4 @@ Open `index.html` in any browser for the full visual overview including:
 
 ---
 
-© 2026 Simon Onderisin. All rights reserved.
+© 2026 Simon Onderisin. All rights reserved. — GreenIOT

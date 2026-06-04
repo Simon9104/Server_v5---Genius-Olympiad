@@ -10,7 +10,7 @@ import aiohttp
 from aiohttp import web
 
 print('System is starting right now!!!!')
-print('All rights reserved by Simon Onderisin ® 2025')
+print('All rights reserved by Simon Onderisin ® 2026')
 print('Any way of copying this code is strictly prohibited!!!!')
 
 # ── Network ───────────────────────────────────────────────────────────────────
@@ -338,7 +338,7 @@ def print_banner() -> None:
 ║   {CYAN}{BOLD}╚██████╔╝██║  ██║███████╗███████╗██║ ╚████║██╔╝ ██╗{GREEN}        ║
 ║   {CYAN}{BOLD} ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝{GREEN}       ║
 ║                                                              ║
-║   {YELLOW}{BOLD}        Greenhouse Monitoring System  v5.0{GREEN}              ║
+║   {YELLOW}{BOLD}              GreenIOT  v5.0{GREEN}                            ║
 ║   {WHITE}{DIM}         Genius Olympiad 2026 — Simon Onderisin{GREEN}           ║
 ║                                                              ║
 ╠══════════════════════════════════════════════════════════════╣
@@ -348,7 +348,7 @@ def print_banner() -> None:
 ║  {WHITE}  CSV  {GREEN}│{WHITE} backup_data_server.csv{GREEN}   Rolling 10-day log         ║
 ║  {WHITE} PICOS {GREEN}│{WHITE} Pico 1 · Pico 2 · Pico 3{GREEN}                            ║
 ║                                                              ║
-║  {DIM}{WHITE}All rights reserved © 2025 Simon Onderisin{GREEN}                  ║
+║  {DIM}{WHITE}All rights reserved © 2026 Simon Onderisin{GREEN}                  ║
 ║  {DIM}{WHITE}Any copying of this code is strictly prohibited.{GREEN}            ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝{RESET}
