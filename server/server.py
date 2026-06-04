@@ -63,8 +63,8 @@ state = {
 }
 seq = {k: [0, 0, 0] for k in state}
 
-# ── Door command queue (None = no override, 0 = close, 1 = open) ─────────────
-door_cmd = [None, None, None]   # per Pico
+# ── Door override — persistent per Pico (null=auto, 0=close, 1=open) ─────────
+door_override = [None, None, None]
 
 # ── CSV backup — rolling window, never holds more than MAX_ROWS in RAM ────────
 MAX_BACKUP_ROWS = 1440          # ~10 days at 10-min intervals
@@ -265,23 +265,20 @@ async def api_door(req: web.Request) -> web.Response:
             value = int(value)
             if value not in (0, 1):
                 raise ValueError
-        # -1 is the wire value for "return to auto" so Pico can distinguish
-        # it from "no command pending" (None/null)
-        door_cmd[pico] = -1 if value is None else value
     except Exception:
         return web.Response(status=400, text='Bad request', headers=cors)
+    door_override[pico] = value              # persist until changed again
     action = 'AUTO' if value is None else ('OPEN' if value == 1 else 'CLOSE')
-    print(f'Door command: Pico {pico+1} → {action}')
+    print(f'Door override: Pico {pico+1} → {action}')
     print('-' * 33)
     return web.Response(text=json.dumps({'ok': True}), content_type='application/json', headers=cors)
 
 async def api_cmd(req: web.Request) -> web.Response:
     cors = {'Access-Control-Allow-Origin': '*'}
     pico_id = int(req.match_info['pico_id']) - 1
-    cmd = door_cmd[pico_id]
-    door_cmd[pico_id] = None                # clear after Pico reads it
+    # Return current override — persistent, not cleared after read
     return web.Response(
-        text=json.dumps({'door': cmd}),
+        text=json.dumps({'door': door_override[pico_id]}),
         content_type='application/json',
         headers=cors,
     )
