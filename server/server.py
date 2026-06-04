@@ -63,6 +63,9 @@ state = {
 }
 seq = {k: [0, 0, 0] for k in state}
 
+# ── Door command queue (None = no override, 0 = close, 1 = open) ─────────────
+door_cmd = [None, None, None]   # per Pico
+
 # ── CSV backup — rolling window, never holds more than MAX_ROWS in RAM ────────
 MAX_BACKUP_ROWS = 1440          # ~10 days at 10-min intervals
 backup_rows: deque = deque(maxlen=MAX_BACKUP_ROWS)
@@ -248,9 +251,41 @@ async def api_data(_req: web.Request) -> web.Response:
         headers={'Access-Control-Allow-Origin': '*'},
     )
 
+async def api_door(req: web.Request) -> web.Response:
+    cors = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type'}
+    if req.method == 'OPTIONS':
+        return web.Response(headers=cors)
+    try:
+        body  = await req.json()
+        pico  = int(body['pico']) - 1       # 1-based → 0-based
+        value = int(body['value'])           # 0 = close, 1 = open
+        if pico not in (0, 1, 2) or value not in (0, 1):
+            raise ValueError
+    except Exception:
+        return web.Response(status=400, text='Bad request', headers=cors)
+    door_cmd[pico] = value
+    action = 'OPEN' if value == 1 else 'CLOSE'
+    print(f'Door command: Pico {pico+1} → {action}')
+    print('-' * 33)
+    return web.Response(text=json.dumps({'ok': True}), content_type='application/json', headers=cors)
+
+async def api_cmd(req: web.Request) -> web.Response:
+    cors = {'Access-Control-Allow-Origin': '*'}
+    pico_id = int(req.match_info['pico_id']) - 1
+    cmd = door_cmd[pico_id]
+    door_cmd[pico_id] = None                # clear after Pico reads it
+    return web.Response(
+        text=json.dumps({'door': cmd}),
+        content_type='application/json',
+        headers=cors,
+    )
+
 async def api_server() -> None:
     app = web.Application()
     app.router.add_get('/data', api_data)
+    app.router.add_post('/door', api_door)
+    app.router.add_options('/door', api_door)
+    app.router.add_get('/cmd/{pico_id}', api_cmd)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, SERVER_HOST, API_PORT)

@@ -1,18 +1,22 @@
 import gc
 import socket
+import ujson
 import uasyncio
 import machine
 import network
 import scd4x
+import urequests
 from machine import Pin, ADC
 from servo import Servo
 from time import sleep
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-SSID       = 'Duchon'
-PASSWORD   = 'Skrecok10Skrecok10.'
-SERVER_IP  = '10.0.0.101'
+SSID        = 'Duchon'
+PASSWORD    = 'Skrecok10Skrecok10.'
+SERVER_IP   = '10.0.0.101'
 SERVER_PORT = 9991
+API_PORT    = 8080
+PICO_ID     = 1          # ← change to 2 or 3 on other Picos
 
 HM_MAX = 54340
 HM_MIN = 20889
@@ -24,6 +28,7 @@ SEND_INTERVAL   = 40    # seconds between TCP sends
 DOOR_INTERVAL   = 20
 PUMP_INTERVAL   = 20
 RAM_INTERVAL    = 300
+CMD_INTERVAL    = 5     # seconds between polling for door commands
 CONNECT_TIMEOUT = 15    # seconds to wait for WiFi
 
 # ── State (plain ints/floats — no string copies until send) ───────────────────
@@ -34,6 +39,7 @@ pump_state  = 0
 ram_pct     = 0
 sequence    = 0
 scd_ok      = False     # set to True only if SCD4X initialises successfully
+door_manual = None      # None = auto, 0 = forced closed, 1 = forced open
 
 # ── Hardware init ─────────────────────────────────────────────────────────────
 led = Pin('LED', Pin.OUT)
@@ -107,7 +113,9 @@ async def door_control():
     global door
     while True:
         try:
-            if temp >= DOOR_OPEN_TEMP:
+            # manual override from website takes priority over auto
+            target = door_manual if door_manual is not None else (1 if temp >= DOOR_OPEN_TEMP else 0)
+            if target == 1:
                 servo1.move(170)
                 door = 1
             else:
@@ -116,6 +124,23 @@ async def door_control():
         except Exception as e:
             print('Door control error:', e)
         await uasyncio.sleep(DOOR_INTERVAL)
+
+
+async def cmd_poll():
+    global door_manual
+    url = 'http://{}:{}/cmd/{}'.format(SERVER_IP, API_PORT, PICO_ID)
+    while True:
+        try:
+            r = urequests.get(url, timeout=4)
+            data = ujson.loads(r.content)
+            r.close()
+            val = data.get('door')
+            if val is not None:
+                door_manual = int(val)
+                print('Door command received:', 'OPEN' if door_manual else 'CLOSE')
+        except Exception as e:
+            print('cmd_poll error:', e)
+        await uasyncio.sleep(CMD_INTERVAL)
 
 
 async def pump_control():
@@ -177,6 +202,7 @@ async def main():
     uasyncio.create_task(pump_control())
     uasyncio.create_task(ram_monitor())
     uasyncio.create_task(data_transfer())
+    uasyncio.create_task(cmd_poll())
     while True:
         await uasyncio.sleep(60)
 
