@@ -34,17 +34,8 @@ TS_KEYS = {
     'ram':          'ENMLII2NCVO8DNZM',
 }
 
-# ── Discord ───────────────────────────────────────────────────────────────────
-DISCORD_TOKEN     = 'MTM5OTA4Mzg2ODk4Mzc4NzU0MQ' + '.GNxs36.' + 'ijxA50O87YSg3hA1O1kCqWwaoz6Dns4iysXXkA'
-DISCORD_TOKEN_ERR = 'MTQyNjg2MTk3MDEzNjYyOTM3OA' + '.GzNIim.' + 'AhxqZ7Qmw-fyADKUtP2pvTNUqGJiKPdgtw4-Aw'
-DISCORD_STATUS_URL = 'https://discord.com/api/v9/channels/1409588804951605413/messages'
-DISCORD_ERROR_URL  = 'https://discord.com/api/v9/channels/1426862416565764139/messages'
-DISCORD_HEADERS     = {'authorization': 'Bot ' + DISCORD_TOKEN}
-DISCORD_ERR_HEADERS = {'authorization': 'Bot ' + DISCORD_TOKEN_ERR}
-
 # ── Intervals (seconds) ───────────────────────────────────────────────────────
 INTERVAL_THINGSPEAK = 120
-INTERVAL_DISCORD    = 7200
 INTERVAL_BACKUP     = 600
 INTERVAL_PING       = 3600
 
@@ -65,6 +56,11 @@ seq = {k: [0, 0, 0] for k in state}
 
 # ── Door override — persistent per Pico (null=auto, 0=close, 1=open) ─────────
 door_override = [None, None, None]
+
+SERVER_START_TIME = datetime.datetime.now()
+
+# ── Alert log — recent ThingSpeak failure events ──────────────────────────────
+alert_log: deque = deque(maxlen=100)
 
 # ── CSV backup — rolling window, never holds more than MAX_ROWS in RAM ────────
 MAX_BACKUP_ROWS = 1440          # ~10 days at 10-min intervals
@@ -132,20 +128,6 @@ async def http_get(session: aiohttp.ClientSession, url: str, params: dict) -> bo
                 await asyncio.sleep(delay)
     return False
 
-async def http_post(session: aiohttp.ClientSession, url: str, headers: dict, content: str) -> None:
-    merged = {**headers, 'Content-Type': 'application/json'}
-    for attempt, delay in enumerate(RETRY_BACKOFF, 1):
-        try:
-            async with session.post(url, json={'content': content},
-                                    headers=merged, timeout=HTTP_TIMEOUT) as resp:
-                if resp.status in (200, 204):
-                    return
-                print(f'Discord POST status {resp.status}: {await resp.text()}')
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f'HTTP POST attempt {attempt}/{MAX_RETRIES} failed: {e}')
-            if attempt < MAX_RETRIES:
-                await asyncio.sleep(delay)
-
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 async def data_recv() -> None:
     loop = asyncio.get_event_loop()
@@ -187,8 +169,7 @@ async def data_send(session: aiohttp.ClientSession) -> None:
                 print(f'ThingSpeak [{name}]: sent.')
             else:
                 print(f'ThingSpeak [{name}]: FAILED after {MAX_RETRIES} retries.')
-                await http_post(session, DISCORD_ERROR_URL, DISCORD_ERR_HEADERS,
-                                f'@simon9104 ThingSpeak FAILED — {name}')
+                alert_log.append({'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'msg': f'ThingSpeak FAILED — {name}'})
 
         ok_ram = await http_get(session, THINGSPEAK_URL, {
             'api_key': TS_KEYS['ram'],
@@ -198,21 +179,9 @@ async def data_send(session: aiohttp.ClientSession) -> None:
         })
         if not ok_ram:
             print(f'ThingSpeak [RAM]: FAILED after {MAX_RETRIES} retries.')
-            await http_post(session, DISCORD_ERROR_URL, DISCORD_ERR_HEADERS,
-                            '@simon9104 ThingSpeak FAILED — RAM')
+            alert_log.append({'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'msg': 'ThingSpeak FAILED — RAM'})
 
         await asyncio.sleep(INTERVAL_THINGSPEAK)
-
-
-async def transfer_discord(session: aiohttp.ClientSession) -> None:
-    await asyncio.sleep(INTERVAL_DISCORD)
-    while True:
-        r = state['ram']
-        msg = (f'RAM — Pico 1: {r[0]}%  |  Pico 2: {r[1]}%  |  Pico 3: {r[2]}%')
-        await http_post(session, DISCORD_STATUS_URL, DISCORD_HEADERS, msg)
-        print('Discord status sent.')
-        print('-' * 33)
-        await asyncio.sleep(INTERVAL_DISCORD)
 
 
 async def backup_data() -> None:
@@ -291,9 +260,31 @@ async def api_cmd(req: web.Request) -> web.Response:
         headers=cors,
     )
 
+async def api_alerts(_req: web.Request) -> web.Response:
+    return web.Response(
+        text=json.dumps(list(alert_log)),
+        content_type='application/json',
+        headers={'Access-Control-Allow-Origin': '*'},
+    )
+
+async def api_status(_req: web.Request) -> web.Response:
+    uptime = datetime.datetime.now() - SERVER_START_TIME
+    hours, rem = divmod(int(uptime.total_seconds()), 3600)
+    minutes = rem // 60
+    return web.Response(
+        text=json.dumps({
+            'started': SERVER_START_TIME.strftime('%Y-%m-%d %H:%M:%S'),
+            'uptime': f'{hours}h {minutes}m',
+        }),
+        content_type='application/json',
+        headers={'Access-Control-Allow-Origin': '*'},
+    )
+
 async def api_server() -> None:
     app = web.Application()
     app.router.add_get('/data', api_data)
+    app.router.add_get('/alerts', api_alerts)
+    app.router.add_get('/status', api_status)
     app.router.add_post('/door', api_door)
     app.router.add_options('/door', api_door)
     app.router.add_get('/cmd/{pico_id}', api_cmd)
@@ -373,12 +364,10 @@ async def main() -> None:
 
     connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
     async with aiohttp.ClientSession(connector=connector) as session:
-        await http_post(session, DISCORD_STATUS_URL, DISCORD_HEADERS, 'Server v5 started.')
         async with asyncio.TaskGroup() as tg:
             tg.create_task(api_server())
             tg.create_task(data_recv())
             tg.create_task(data_send(session))
-            tg.create_task(transfer_discord(session))
             tg.create_task(backup_data())
             for i in range(3):
                 tg.create_task(ping_pico(i))

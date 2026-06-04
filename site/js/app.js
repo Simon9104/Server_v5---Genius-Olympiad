@@ -75,6 +75,9 @@
       document.getElementById('lastUpdated').textContent =
         `Last updated: ${data.timestamp}  ·  refreshes every ${POLL_INTERVAL / 1000}s`;
 
+      fetchStatus();
+      fetchAlerts();
+
     } catch (e) {
       dot.className = 'live-dot error';
       txt.textContent = 'Connection failed';
@@ -117,6 +120,42 @@
     stopPolling();
     fetchData();
     pollTimer = setInterval(fetchData, POLL_INTERVAL);
+  }
+
+  async function fetchStatus() {
+    const host = document.getElementById('apiHost').value.trim();
+    try {
+      const res = await fetch(`http://${host}:8080/status`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) return;
+      const d = await res.json();
+      document.getElementById('serverStarted').textContent = d.started;
+      document.getElementById('serverUptime').textContent  = d.uptime;
+    } catch (_) {}
+  }
+
+  async function fetchAlerts() {
+    const host = document.getElementById('apiHost').value.trim();
+    try {
+      const res = await fetch(`http://${host}:8080/alerts`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) return;
+      const alerts = await res.json();
+      const log  = document.getElementById('alertLog');
+      const empty = document.getElementById('alertEmpty');
+      if (alerts.length === 0) {
+        empty.style.display = 'block';
+        // remove old entries
+        log.querySelectorAll('.al-entry').forEach(e => e.remove());
+        return;
+      }
+      empty.style.display = 'none';
+      log.querySelectorAll('.al-entry').forEach(e => e.remove());
+      alerts.slice().reverse().forEach(a => {
+        const el = document.createElement('div');
+        el.className = 'al-entry';
+        el.innerHTML = `<span class="al-time">${a.time}</span><span class="al-msg">${a.msg}</span>`;
+        log.appendChild(el);
+      });
+    } catch (_) {}
   }
 
   function stopPolling() {

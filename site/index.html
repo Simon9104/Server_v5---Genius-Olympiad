@@ -24,6 +24,7 @@
   <a href="#tasks">Tasks</a>
   <a href="#schema">CSV Schema</a>
   <a href="#live">Live Dashboard</a>
+  <a href="#alerts">Alerts</a>
   <a href="#display">Display Data</a>
   <div class="badge">● LIVE v5</div>
 </nav>
@@ -37,7 +38,7 @@
     <span>👤 Simon Onderisin</span>
     <span>🐍 Python asyncio</span>
     <span>🔌 TCP :9991</span>
-    <span>☁️ ThingSpeak + Discord</span>
+    <span>☁️ ThingSpeak + Alerts Panel</span>
   </div>
 </div>
 
@@ -207,6 +208,22 @@
 
     </div>
     <div class="last-updated" id="lastUpdated"></div>
+  </section>
+
+  <!-- ALERTS & STATUS -->
+  <section id="alerts">
+    <div class="section-title"><span class="dot" style="background:var(--yellow)"></span> Server Status &amp; Alerts</div>
+    <div class="alerts-bar">
+      <div class="server-status-box" id="serverStatusBox">
+        <div class="ssb-label">Server started</div>
+        <div class="ssb-value" id="serverStarted">—</div>
+        <div class="ssb-label" style="margin-top:6px">Uptime</div>
+        <div class="ssb-value" id="serverUptime">—</div>
+      </div>
+      <div class="alert-log" id="alertLog">
+        <div class="al-empty" id="alertEmpty">No alerts — all systems normal ✔</div>
+      </div>
+    </div>
   </section>
 
   <!-- PICO DEVICES -->

@@ -714,3 +714,41 @@
       color: var(--muted);
     }
     footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── Alerts & Status ───────────────────────────────────────── */
+    .alerts-bar {
+      display: flex;
+      gap: 1.2rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .server-status-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.4rem;
+      min-width: 180px;
+    }
+    .ssb-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .ssb-value { font-size: 1rem; color: var(--text); font-weight: 600; margin-top: 2px; }
+    .alert-log {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .8rem 1rem;
+      max-height: 220px;
+      overflow-y: auto;
+      min-width: 260px;
+    }
+    .al-empty { color: var(--green); font-size: .9rem; padding: .4rem 0; }
+    .al-entry {
+      display: flex;
+      gap: .8rem;
+      padding: .35rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .85rem;
+    }
+    .al-entry:last-child { border-bottom: none; }
+    .al-time { color: var(--muted); white-space: nowrap; }
+    .al-msg  { color: var(--yellow); }
