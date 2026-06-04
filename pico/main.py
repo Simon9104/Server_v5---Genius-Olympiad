@@ -1,147 +1,168 @@
-from time import sleep
+import gc
+import socket
+import uasyncio
+import machine
+import network
+import scd4x
 from machine import Pin, ADC
 from servo import Servo
-import socket, random, uasyncio, network, gc, urequests, machine, scd4x
+from time import sleep
 
-print('System is starting right now!!!!')
-print('All rights reserved by Simon Onderisin ® 2025')
-print("Any way of copying this code is strictly prohibited!!!!")
-sleep(2)
+# ── Constants ─────────────────────────────────────────────────────────────────
+SSID       = 'Duchon'
+PASSWORD   = 'Skrecok10Skrecok10.'
+SERVER_IP  = '10.0.0.101'
+SERVER_PORT = 9991
 
+HM_MAX = 54340
+HM_MIN = 20889
+DOOR_OPEN_TEMP  = 25    # °C — open door above this
+PUMP_ON_HM      = 60    # %  — run pump below this
+RAM_GC_THRESH   = 50    # %  — force gc.collect above this
+
+SEND_INTERVAL   = 40    # seconds between TCP sends
+DOOR_INTERVAL   = 20
+PUMP_INTERVAL   = 20
+RAM_INTERVAL    = 300
+CONNECT_TIMEOUT = 15    # seconds to wait for WiFi
+
+# ── State (plain ints/floats — no string copies until send) ───────────────────
+humidity    = 0.0
+temp        = 0.0
+door        = 0
+pump_state  = 0
+ram_pct     = 0
+sequence    = 0
+
+# ── Hardware init ─────────────────────────────────────────────────────────────
 led = Pin('LED', Pin.OUT)
 led.low()
 
-network.hostname('Semi_cl_picow')
-sleep(1)
+gc.enable()
+gc.collect()
 
+# WiFi
+network.hostname('Semi_cl_picow')
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
-wlan.connect('Duchon', 'Skrecok10Skrecok10.')
-sleep(10)
-print(wlan.ifconfig())
+wlan.connect(SSID, PASSWORD)
+
+deadline = CONNECT_TIMEOUT
+while not wlan.isconnected() and deadline > 0:
+    sleep(1)
+    deadline -= 1
+
+if not wlan.isconnected():
+    print('WiFi failed — rebooting')
+    machine.reset()
+
+print('WiFi OK:', wlan.ifconfig()[0])
 led.high()
 
-gc.enable()
-
-sequence = 0
-
-CTRL1_num = 1
-CTRL1_num = str(CTRL1_num)
-
+# Sensors
 i2c = machine.I2C(0, sda=Pin(16), scl=Pin(17), freq=100000)
 scd = scd4x.SCD4X(i2c)
 sleep(0.5)
 scd.start_periodic_measurement()
 
-humidity_sensor = ADC(Pin(27))
-
-max_hm = 54340
-min_hm = 20889
-
-pump = Pin(15, Pin.OUT)
-pump.high()
+hm_adc  = ADC(Pin(27))
+pump_pin = Pin(15, Pin.OUT)
+pump_pin.high()
 
 servo1 = Servo(pin=1)
-
 servo1.move(90)
 
-async def Humidity_measure():
-    global humidity, i2c, scd, max_hm, min_hm
+# ── Tasks ─────────────────────────────────────────────────────────────────────
+async def humidity_measure():
+    global humidity
     while True:
-        humidity = (max_hm - humidity_sensor.read_u16())*100/(max_hm - min_hm)
-        humidity = round(humidity, 1)
-        if humidity >= 100:
-            humidity = 100
-        if humidity <= 1:
-            humidity = 0
+        raw = hm_adc.read_u16()
+        val = (HM_MAX - raw) * 100 / (HM_MAX - HM_MIN)
+        humidity = max(0.0, min(100.0, round(val, 1)))
         await uasyncio.sleep(1)
 
+
 async def temperature_measure():
-    global temp1, sdc, i2c
+    global temp
     while True:
         if scd.data_ready:
-            temp1 = scd.temperature
-            temp1 = round(temp1, 1)
-            await uasyncio.sleep(1)
+            temp = round(scd.temperature, 1)
+        await uasyncio.sleep(1)
 
-async def door_status():
-    global temp1, door_status1, door_status_num, servo1
+
+async def door_control():
+    global door
     while True:
-        if temp1 >= 25:
+        if temp >= DOOR_OPEN_TEMP:
             servo1.move(170)
-            door_status1 = 1
-            door_status_num = str(door_status1)
-
+            door = 1
         else:
             servo1.move(70)
-            door_status1 = 0
-            door_status_num = str(door_status1)
-        await uasyncio.sleep(20)
+            door = 0
+        await uasyncio.sleep(DOOR_INTERVAL)
 
-async def pump_status():
-    global humidity, pump_status1, pump_status_num, pump
+
+async def pump_control():
+    global pump_state
     while True:
-        if humidity <= 60:
-            pump.low()
+        if humidity <= PUMP_ON_HM:
+            pump_pin.low()
             sleep(0.5)
-            pump.high()
-            pump_status1 = 1
-            pump_status_num = str(pump_status1)
+            pump_pin.high()
+            pump_state = 1
         else:
-            pump.high()
-            pump_status1 = 0
-            pump_status_num = str(pump_status1)
-        await uasyncio.sleep(20)
+            pump_pin.high()
+            pump_state = 0
+        await uasyncio.sleep(PUMP_INTERVAL)
+
+
+async def ram_monitor():
+    global ram_pct
+    while True:
+        alloc = gc.mem_alloc()
+        ram_pct = int(alloc * 100 / (alloc + gc.mem_free()))
+        if ram_pct > RAM_GC_THRESH:
+            gc.collect()
+            ram_pct = int(gc.mem_alloc() * 100 / (gc.mem_alloc() + gc.mem_free()))
+            print('GC collected — RAM now:', ram_pct, '%')
+        await uasyncio.sleep(RAM_INTERVAL)
+
 
 async def data_transfer():
-    global humidity, temp1, door_status_num, pump_status_num, RAM, CTRL1_num, sequence, pump
+    global sequence
+    await uasyncio.sleep(5)     # wait for first sensor readings
     while True:
-        humidity = str(humidity)
-        temp1 = str(temp1)
-        socket1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        data = f"HM1:{humidity}\nTP1:{temp1}\nDRRS1:{door_status_num}\nPS1:{pump_status_num}\nRAM1:{RAM}\nCTRL1:{CTRL1_num}\n"
-        data = data.encode()
-        socket1.connect(('10.0.0.101', 9991))
-        socket1.send(data)
-        sequence += 1
-        print(sequence,'.',"Data transfer of all variables was DONE successfully!")
-        print('Humdity:', humidity)
-        print("Temperature:", temp1)
-        print('Door status:', door_status_num)
-        print('Pump status:', pump_status_num)
-        print('---------------------------------')
-        socket1.close()
-        await uasyncio.sleep(40)
-
-async def RAM_usage():
-    global gc, RAM
-    while True:
-        RAM = gc.mem_alloc()/1024
-        RAM = int((RAM*100)/264)
-        print('RAM usage is:', RAM,'%')
-        print('---------------------------------')
-        if RAM > 50:
-            gc.collect()
-            print('RAM was collected succesfully!!')
-        await uasyncio.sleep(300)
+        # Build payload once — reuse buffer
+        payload = (
+            'HM1:{}\nTP1:{}\nDRRS1:{}\nPS1:{}\nRAM1:{}\n'
+            .format(humidity, temp, door, pump_state, ram_pct)
+            .encode()
+        )
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        try:
+            sock.connect((SERVER_IP, SERVER_PORT))
+            sock.send(payload)
+            sequence += 1
+            print(sequence, '. Sent — HM:', humidity, 'TP:', temp,
+                  'DRRS:', door, 'PS:', pump_state, 'RAM:', ram_pct, '%')
+        except OSError as e:
+            print('Send failed:', e)
+        finally:
+            sock.close()
+            del payload, sock   # free immediately
+        await uasyncio.sleep(SEND_INTERVAL)
 
 
 async def main():
-    global humidity, temp1, door_status_num, pump_status_num, sequence
-    uasyncio.create_task(Humidity_measure())
+    uasyncio.create_task(humidity_measure())
     uasyncio.create_task(temperature_measure())
-    uasyncio.create_task(door_status())
-    uasyncio.create_task(pump_status())
-    uasyncio.create_task(RAM_usage())
+    uasyncio.create_task(door_control())
+    uasyncio.create_task(pump_control())
+    uasyncio.create_task(ram_monitor())
     uasyncio.create_task(data_transfer())
     while True:
-        await Humidity_measure()
-        await temperature_measure()
-        await door_status()
-        await pump_status()
-        await RAM_usage()
-        await data_transfer()
-        print('program is running!')
-        await uasyncio.sleep(120)
+        await uasyncio.sleep(60)
+
 
 uasyncio.run(main())
