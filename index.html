@@ -545,6 +545,26 @@
       color: var(--muted);
       margin-top: 1rem;
     }
+    .door-controls {
+      display: flex;
+      gap: .5rem;
+      margin-top: .75rem;
+    }
+    .door-btn {
+      flex: 1;
+      padding: .45rem .5rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .door-btn:active { transform: scale(.96); }
+    .door-btn.open  { background: var(--green); color: #000; }
+    .door-btn.close { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .door-btn.auto  { background: var(--surface); color: var(--yellow); border: 1px solid var(--yellow); }
+    .door-btn:disabled { opacity: .4; cursor: not-allowed; }
     .error-banner {
       background: #2a1a1a;
       border: 1px solid var(--red);
@@ -800,6 +820,11 @@
           <div class="sb-label">RAM Usage — <span id="ram-val-0">—</span>%</div>
           <div class="ram-bar-wrap"><div class="ram-bar" id="ram-bar-0" style="width:0%;background:var(--purple)"></div></div>
         </div>
+        <div class="door-controls">
+          <button class="door-btn open"  onclick="sendDoor(1,1)">Open Door</button>
+          <button class="door-btn close" onclick="sendDoor(1,0)">Close Door</button>
+          <button class="door-btn auto"  onclick="sendDoor(1,null)">Auto</button>
+        </div>
       </div>
 
       <!-- Pico 2 -->
@@ -842,6 +867,11 @@
           <div class="sb-label">RAM Usage — <span id="ram-val-1">—</span>%</div>
           <div class="ram-bar-wrap"><div class="ram-bar" id="ram-bar-1" style="width:0%;background:var(--purple)"></div></div>
         </div>
+        <div class="door-controls">
+          <button class="door-btn open"  onclick="sendDoor(2,1)">Open Door</button>
+          <button class="door-btn close" onclick="sendDoor(2,0)">Close Door</button>
+          <button class="door-btn auto"  onclick="sendDoor(2,null)">Auto</button>
+        </div>
       </div>
 
       <!-- Pico 3 -->
@@ -883,6 +913,11 @@
         <div class="ram-row">
           <div class="sb-label">RAM Usage — <span id="ram-val-2">—</span>%</div>
           <div class="ram-bar-wrap"><div class="ram-bar" id="ram-bar-2" style="width:0%;background:var(--purple)"></div></div>
+        </div>
+        <div class="door-controls">
+          <button class="door-btn open"  onclick="sendDoor(3,1)">Open Door</button>
+          <button class="door-btn close" onclick="sendDoor(3,0)">Close Door</button>
+          <button class="door-btn auto"  onclick="sendDoor(3,null)">Auto</button>
         </div>
       </div>
 
@@ -1608,6 +1643,28 @@ plt.show()</pre>
         pingEl.textContent = 'Offline';
         pingEl.className = 'lc-ping offline';
       }
+    }
+  }
+
+  async function sendDoor(picoId, value) {
+    const host = document.getElementById('apiHost').value.trim();
+    const url  = `http://${host}:8080/door`;
+    const btns = document.querySelectorAll(`.door-controls button`);
+    btns.forEach(b => b.disabled = true);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pico: picoId, value: value }),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const action = value === 1 ? 'Open' : value === 0 ? 'Close' : 'Auto';
+      console.log(`Pico ${picoId} door → ${action}`);
+    } catch (e) {
+      alert(`Door command failed: ${e.message}`);
+    } finally {
+      btns.forEach(b => b.disabled = false);
     }
   }
 
