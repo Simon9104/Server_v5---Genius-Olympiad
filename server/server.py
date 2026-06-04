@@ -69,6 +69,12 @@ door_override = [None, None, None]
 # ── CSV backup — rolling window, never holds more than MAX_ROWS in RAM ────────
 MAX_BACKUP_ROWS = 1440          # ~10 days at 10-min intervals
 backup_rows: deque = deque(maxlen=MAX_BACKUP_ROWS)
+if os.path.exists('backup_data_server.csv'):
+    with open('backup_data_server.csv', 'r', newline='') as _f:
+        _reader = csv.reader(_f)
+        next(_reader, None)
+        for _row in _reader:
+            backup_rows.append(_row)
 CSV_COLUMNS = [
     'Time',
     'Humidity SC', 'TP SC', 'DRRS SC', 'PS SC',
