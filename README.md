@@ -1,13 +1,33 @@
 # Greenhouse IoT Monitoring Server v5
 
 > **Genius Olympiad 2026** — Simon Onderisin  
-> Centralized IoT server for three greenhouse environments using Raspberry Pi Pico devices.
+> Centralized IoT server for three greenhouse environments using Raspberry Pi Pico W devices.
 
 ---
 
 ## Overview
 
-This server collects real-time sensor data from three Raspberry Pi Pico devices over TCP, forwards readings to the ThingSpeak cloud platform, sends alerts to Discord, maintains a local CSV backup, and serves a live JSON API for the web dashboard.
+This server collects real-time sensor data from three Raspberry Pi Pico W devices over TCP, forwards readings to the ThingSpeak cloud platform, sends alerts to Discord, maintains a local CSV backup, and serves a live JSON API for the web dashboard.
+
+---
+
+## Repository Structure
+
+```
+├── server/
+│   ├── server.py       # Main server — asyncio, TCP, HTTP API, ThingSpeak, Discord
+│   └── config.py       # Discord tokens (not tracked by git — create locally)
+├── pico/
+│   ├── main.py         # Pico W main program — sensors, servo, pump, TCP send
+│   ├── servo.py        # Servo motor driver
+│   ├── scd4x.py        # SCD4X CO2/temperature/humidity sensor driver
+│   ├── skuska_rele_BIO.py  # Relay test script
+│   ├── server.py       # Early Pico socket test
+│   └── try.py          # Early Pico socket test
+├── index.html          # Documentation website + live dashboard
+├── .gitignore
+└── README.md
+```
 
 ---
 
@@ -64,7 +84,7 @@ The server exposes a live JSON endpoint for the web dashboard.
 **Response:**
 ```json
 {
-  "timestamp": "2025-06-04 14:23:01",
+  "timestamp": "2026-06-04 14:23:01",
   "picos": [
     { "id": 1, "name": "Semi-Closed",   "humidity": 65.5, "temperature": 22.3, "door": 1, "pump": 0, "ram": 45.2 },
     { "id": 2, "name": "Fully-Closed",  "humidity": 78.1, "temperature": 27.8, "door": 0, "pump": 1, "ram": 38.7 },
@@ -96,7 +116,7 @@ Open `index.html` in any browser on the same network:
 | `data_send()` | 120 s | Pushes sensor data to ThingSpeak (4 channels) |
 | `transfer_discord()` | 7200 s | Posts RAM usage summary to Discord |
 | `backup_data()` | 600 s | Appends snapshot to `backup_data_server.csv` |
-| `control_RPI()` | 3600 s | Pings Pico 1, 2, and 3 — logs online/offline |
+| `ping_pico()` | 3600 s | Pings Pico 1, 2, and 3 — logs online/offline |
 
 ---
 
@@ -124,6 +144,22 @@ Time | Humidity SC | TP SC | DRRS SC | PS SC | HM C | TP C | DRRS C | PS C | HM 
 
 ---
 
+## Pico W — `pico/main.py`
+
+The Pico W program reads sensors and sends data to the server every 40 seconds.
+
+**Sensors used:**
+- SCD4X (I2C) — temperature (GP16 SDA, GP17 SCL)
+- Analog humidity sensor — ADC on GP27
+- Door servo — PWM on GP1
+- Pump relay — GP15
+
+**SCD4X fault tolerance:** if the sensor is not connected or fails I2C detection, the Pico boots normally — temperature and door control are skipped, all other tasks keep running.
+
+**WiFi:** connects on boot with a 15-second timeout. Calls `machine.reset()` if connection fails.
+
+---
+
 ## Requirements
 
 ```
@@ -134,12 +170,21 @@ aiohttp
 
 ## Running
 
+1. Create `server/config.py` with your Discord tokens:
+
+```python
+DISCORD_TOKEN     = 'your_status_bot_token'
+DISCORD_TOKEN_ERR = 'your_error_bot_token'
+```
+
+2. Install and run:
+
 ```bash
 pip install aiohttp
 python3 server/server.py
 ```
 
-The server starts 6 async tasks and listens on:
+The server listens on:
 - **TCP `:9991`** — receives sensor data from Picos
 - **HTTP `:8080`** — serves live JSON for the dashboard
 
