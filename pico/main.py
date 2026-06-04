@@ -134,10 +134,11 @@ async def cmd_poll():
             r = urequests.get(url, timeout=4)
             data = ujson.loads(r.content)
             r.close()
-            val = data.get('door')
-            if val is not None:
-                door_manual = int(val)
-                print('Door command received:', 'OPEN' if door_manual else 'CLOSE')
+            # door: null = auto, 0 = force close, 1 = force open
+            # always apply — server holds persistent state
+            raw = data.get('door')
+            door_manual = None if raw is None else int(raw)
+            print('Door override:', 'AUTO' if door_manual is None else ('OPEN' if door_manual else 'CLOSE'))
         except Exception as e:
             print('cmd_poll error:', e)
         await uasyncio.sleep(CMD_INTERVAL)
