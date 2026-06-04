@@ -1,6 +1,6 @@
 # Greenhouse IoT Monitoring Server v5
 
-> **Genius Olympiad 2025** — Simon Onderisin  
+> **Genius Olympiad 2026** — Simon Onderisin  
 > Centralized IoT server for three greenhouse environments using Raspberry Pi Pico devices.
 
 ---
@@ -158,4 +158,4 @@ Open `index.html` in any browser for the full visual overview including:
 
 ---
 
-© 2025 Simon Onderisin. All rights reserved.
+© 2026 Simon Onderisin. All rights reserved.
