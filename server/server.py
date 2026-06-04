@@ -35,11 +35,8 @@ TS_KEYS = {
 }
 
 # ── Discord ───────────────────────────────────────────────────────────────────
-# Set these environment variables before running:
-#   export DISCORD_TOKEN="your_status_bot_token"
-#   export DISCORD_TOKEN_ERR="your_error_bot_token"
-DISCORD_TOKEN      = os.environ.get('DISCORD_TOKEN', '')
-DISCORD_TOKEN_ERR  = os.environ.get('DISCORD_TOKEN_ERR', '')
+# Tokens are stored in server/config.py (not tracked by git)
+from config import DISCORD_TOKEN, DISCORD_TOKEN_ERR
 DISCORD_STATUS_URL = 'https://discord.com/api/v9/channels/1409588804951605413/messages'
 DISCORD_ERROR_URL  = 'https://discord.com/api/v9/channels/1426862416565764139/messages'
 DISCORD_HEADERS     = {'authorization': DISCORD_TOKEN}
