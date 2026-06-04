@@ -258,16 +258,18 @@ async def api_door(req: web.Request) -> web.Response:
     try:
         body  = await req.json()
         pico  = int(body['pico']) - 1           # 1-based → 0-based
-        value = body.get('value')               # None = auto, 0 = close, 1 = open
+        value = body.get('value')               # null = auto, 0 = close, 1 = open
         if pico not in (0, 1, 2):
             raise ValueError
         if value is not None:
             value = int(value)
             if value not in (0, 1):
                 raise ValueError
+        # -1 is the wire value for "return to auto" so Pico can distinguish
+        # it from "no command pending" (None/null)
+        door_cmd[pico] = -1 if value is None else value
     except Exception:
         return web.Response(status=400, text='Bad request', headers=cors)
-    door_cmd[pico] = value
     action = 'AUTO' if value is None else ('OPEN' if value == 1 else 'CLOSE')
     print(f'Door command: Pico {pico+1} → {action}')
     print('-' * 33)

@@ -136,8 +136,13 @@ async def cmd_poll():
             r.close()
             val = data.get('door')
             if val is not None:
-                door_manual = int(val)
-                print('Door command received:', 'OPEN' if door_manual else 'CLOSE')
+                v = int(val)
+                if v == -1:
+                    door_manual = None          # return to auto/temperature control
+                    print('Door command received: AUTO')
+                else:
+                    door_manual = v
+                    print('Door command received:', 'OPEN' if v else 'CLOSE')
         except Exception as e:
             print('cmd_poll error:', e)
         await uasyncio.sleep(CMD_INTERVAL)
