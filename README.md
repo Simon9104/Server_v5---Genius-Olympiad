@@ -77,7 +77,9 @@ RAM1:45.2
 
 ## HTTP API
 
-The server exposes a live JSON endpoint for the web dashboard.
+The server exposes a live JSON API for the web dashboard and door control.
+
+### `GET /data`
 
 **Endpoint:** `GET http://<server-ip>:8080/data`
 
@@ -94,6 +96,30 @@ The server exposes a live JSON endpoint for the web dashboard.
 ```
 
 CORS is enabled — the dashboard can be opened from any browser on the network.
+
+### `POST /door`
+
+Control a Pico's door servo remotely.
+
+```json
+{ "pico": 1, "value": 1 }
+```
+
+| `value` | Action |
+|---------|--------|
+| `1` | Force open |
+| `0` | Force close |
+| `null` | Auto (sensor-driven) |
+
+### `GET /cmd/{pico_id}`
+
+Picos poll this endpoint every 5 seconds to receive the current door override.
+
+```json
+{ "door": 1 }
+```
+
+The override persists until explicitly changed — it is not cleared after the Pico reads it.
 
 ---
 
@@ -142,6 +168,8 @@ Time | Humidity SC | TP SC | DRRS SC | PS SC | HM C | TP C | DRRS C | PS C | HM 
 **Legend:** SC = Semi-Closed · C = Fully-Closed · FREE = Free Planting  
 **Columns:** HM = Humidity · TP = Temperature · DRRS = Door/Relay · PS = Pump
 
+> **Restart-safe:** on startup the server loads existing CSV rows back into memory before writing, so history is never lost across restarts.
+
 ---
 
 ## Pico W — `pico/main.py`
@@ -170,19 +198,14 @@ aiohttp
 
 ## Running
 
-1. Create `server/config.py` with your Discord tokens:
-
-```python
-DISCORD_TOKEN     = 'your_status_bot_token'
-DISCORD_TOKEN_ERR = 'your_error_bot_token'
-```
-
-2. Install and run:
+1. Install dependencies and start:
 
 ```bash
 pip install aiohttp
 python3 server/server.py
 ```
+
+On startup the terminal displays a colour ASCII banner with system info, port assignments, and how many backup rows were restored from the previous session.
 
 The server listens on:
 - **TCP `:9991`** — receives sensor data from Picos
