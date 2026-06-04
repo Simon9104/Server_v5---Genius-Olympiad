@@ -318,9 +318,50 @@ async def ping_pico(index: int) -> None:
         await asyncio.sleep(INTERVAL_PING)
 
 
-async def main() -> None:
+def print_banner() -> None:
     os.system('clear')
-    print('System started successfully!')
+    GREEN  = '\033[92m'
+    CYAN   = '\033[96m'
+    YELLOW = '\033[93m'
+    WHITE  = '\033[97m'
+    DIM    = '\033[2m'
+    RESET  = '\033[0m'
+    BOLD   = '\033[1m'
+
+    banner = f"""
+{GREEN}╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║   {CYAN}{BOLD} ██████╗ ██████╗ ███████╗███████╗███╗   ██╗██╗  ██╗{GREEN}        ║
+║   {CYAN}{BOLD}██╔════╝ ██╔══██╗██╔════╝██╔════╝████╗  ██║╚██╗██╔╝{GREEN}        ║
+║   {CYAN}{BOLD}██║  ███╗██████╔╝█████╗  █████╗  ██╔██╗ ██║ ╚███╔╝ {GREEN}        ║
+║   {CYAN}{BOLD}██║   ██║██╔══██╗██╔══╝  ██╔══╝  ██║╚██╗██║ ██╔██╗ {GREEN}        ║
+║   {CYAN}{BOLD}╚██████╔╝██║  ██║███████╗███████╗██║ ╚████║██╔╝ ██╗{GREEN}        ║
+║   {CYAN}{BOLD} ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝{GREEN}       ║
+║                                                              ║
+║   {YELLOW}{BOLD}        Greenhouse Monitoring System  v5.0{GREEN}              ║
+║   {WHITE}{DIM}         Genius Olympiad 2026 — Simon Onderisin{GREEN}           ║
+║                                                              ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  {WHITE}  TCP  {GREEN}│{WHITE} 0.0.0.0:{CYAN}9991{GREEN}          Pico data intake             ║
+║  {WHITE}  API  {GREEN}│{WHITE} 0.0.0.0:{CYAN}8080{GREEN}          Live dashboard API            ║
+║  {WHITE}  CSV  {GREEN}│{WHITE} backup_data_server.csv{GREEN}   Rolling 10-day log         ║
+║  {WHITE} PICOS {GREEN}│{WHITE} Pico 1 · Pico 2 · Pico 3{GREEN}                            ║
+║                                                              ║
+║  {DIM}{WHITE}All rights reserved © 2025 Simon Onderisin{GREEN}                  ║
+║  {DIM}{WHITE}Any copying of this code is strictly prohibited.{GREEN}            ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝{RESET}
+"""
+    print(banner)
+    rows_loaded = len(backup_rows)
+    if rows_loaded:
+        print(f'{YELLOW}  ↺  Loaded {rows_loaded} backup rows from previous session.{RESET}')
+    print(f'{GREEN}  ✔  System starting…{RESET}\n')
+
+
+async def main() -> None:
+    print_banner()
 
     connector = aiohttp.TCPConnector(limit=10, ttl_dns_cache=300)
     async with aiohttp.ClientSession(connector=connector) as session:
