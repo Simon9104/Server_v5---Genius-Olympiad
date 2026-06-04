@@ -257,14 +257,18 @@ async def api_door(req: web.Request) -> web.Response:
         return web.Response(headers=cors)
     try:
         body  = await req.json()
-        pico  = int(body['pico']) - 1       # 1-based → 0-based
-        value = int(body['value'])           # 0 = close, 1 = open
-        if pico not in (0, 1, 2) or value not in (0, 1):
+        pico  = int(body['pico']) - 1           # 1-based → 0-based
+        value = body.get('value')               # None = auto, 0 = close, 1 = open
+        if pico not in (0, 1, 2):
             raise ValueError
+        if value is not None:
+            value = int(value)
+            if value not in (0, 1):
+                raise ValueError
     except Exception:
         return web.Response(status=400, text='Bad request', headers=cors)
     door_cmd[pico] = value
-    action = 'OPEN' if value == 1 else 'CLOSE'
+    action = 'AUTO' if value is None else ('OPEN' if value == 1 else 'CLOSE')
     print(f'Door command: Pico {pico+1} → {action}')
     print('-' * 33)
     return web.Response(text=json.dumps({'ok': True}), content_type='application/json', headers=cors)
