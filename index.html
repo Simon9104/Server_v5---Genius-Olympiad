@@ -392,6 +392,170 @@
     .col-pill span { color: var(--muted); font-size: .72rem; }
 
     /* ── FOOTER ── */
+    /* ── LIVE DASHBOARD ── */
+    .live-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .live-status {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .85rem;
+    }
+    .live-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .3s;
+    }
+    .live-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    .live-dot.error   { background: var(--red); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+    .api-config {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+    .api-config input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: .35rem .7rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: .82rem;
+      width: 220px;
+    }
+    .api-config input:focus { outline: none; border-color: var(--accent); }
+    .btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: .35rem .9rem;
+      border-radius: 6px;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn.secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-weight: 400;
+    }
+    .live-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+    .live-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      transition: border-color .3s;
+    }
+    .live-card.fresh { border-color: var(--green); }
+    .live-card .lc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .live-card .lc-title { font-weight: 700; font-size: .95rem; }
+    .live-card .lc-ping {
+      font-size: .72rem;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .lc-ping.online  { background: #1a3a1a; color: var(--green); }
+    .lc-ping.offline { background: #3a1a1a; color: var(--red); }
+    .lc-ping.waiting { background: var(--surface); color: var(--muted); }
+    .sensor-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+    .sensor-box {
+      background: var(--surface);
+      border-radius: 7px;
+      padding: .7rem .85rem;
+    }
+    .sensor-box .sb-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .2rem; }
+    .sensor-box .sb-value { font-size: 1.5rem; font-weight: 800; line-height: 1; }
+    .sensor-box .sb-unit  { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+    .sensor-box .sb-bar-wrap {
+      background: var(--border);
+      border-radius: 3px;
+      height: 4px;
+      margin-top: .45rem;
+      overflow: hidden;
+    }
+    .sensor-box .sb-bar { height: 100%; border-radius: 3px; transition: width .6s ease; }
+    .status-boxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+    }
+    .status-box {
+      background: var(--surface);
+      border-radius: 7px;
+      padding: .7rem .85rem;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    .status-box .sb-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .status-box .sb-info .sb-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .status-box .sb-info .sb-state { font-size: .9rem; font-weight: 700; }
+    .ram-row {
+      margin-top: .75rem;
+      background: var(--surface);
+      border-radius: 7px;
+      padding: .7rem .85rem;
+    }
+    .ram-row .sb-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+    .ram-row .ram-bar-wrap {
+      background: var(--border);
+      border-radius: 3px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .ram-row .ram-bar { height: 100%; border-radius: 3px; transition: width .6s ease; }
+    .ram-row .ram-val { font-size: .78rem; color: var(--muted); margin-top: .3rem; }
+    .last-updated {
+      text-align: center;
+      font-size: .75rem;
+      color: var(--muted);
+      margin-top: 1rem;
+    }
+    .error-banner {
+      background: #2a1a1a;
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      color: var(--red);
+      font-size: .85rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
     /* ── CODE BLOCKS ── */
     pre {
       background: var(--surface);
@@ -555,6 +719,7 @@
   <a href="#protocol">Protocol</a>
   <a href="#tasks">Tasks</a>
   <a href="#schema">CSV Schema</a>
+  <a href="#live">Live Dashboard</a>
   <a href="#display">Display Data</a>
   <div class="badge">● LIVE v5</div>
 </nav>
@@ -573,6 +738,157 @@
 </div>
 
 <div class="container">
+
+  <!-- LIVE DASHBOARD -->
+  <section id="live">
+    <div class="section-title"><span class="dot" style="background:var(--green)"></span> Live Sensor Dashboard</div>
+
+    <div class="live-header">
+      <div class="api-config">
+        <span style="font-size:.85rem;color:var(--muted)">Server IP:</span>
+        <input id="apiHost" type="text" value="192.168.1.X" placeholder="e.g. 192.168.1.50" />
+        <button class="btn" onclick="startPolling()">Connect</button>
+        <button class="btn secondary" onclick="stopPolling()">Stop</button>
+      </div>
+      <div class="live-status">
+        <div class="live-dot" id="liveDot"></div>
+        <span id="liveStatusText" style="color:var(--muted)">Not connected</span>
+      </div>
+    </div>
+
+    <div class="error-banner" id="errorBanner"></div>
+
+    <div class="live-grid" id="liveGrid">
+
+      <!-- Pico 1 -->
+      <div class="live-card" id="card-0">
+        <div class="lc-header">
+          <div class="lc-title">Pico 1 — Semi-Closed</div>
+          <div class="lc-ping waiting" id="ping-0">Waiting…</div>
+        </div>
+        <div class="sensor-row">
+          <div class="sensor-box">
+            <div class="sb-label">Humidity</div>
+            <div class="sb-value" id="hm-0" style="color:#58c8ff">—</div>
+            <div class="sb-unit">%</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" id="hm-bar-0" style="width:0%;background:#58c8ff"></div></div>
+          </div>
+          <div class="sensor-box">
+            <div class="sb-label">Temperature</div>
+            <div class="sb-value" id="tp-0" style="color:#ff7b7b">—</div>
+            <div class="sb-unit">°C</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" id="tp-bar-0" style="width:0%;background:#ff7b7b"></div></div>
+          </div>
+        </div>
+        <div class="status-boxes">
+          <div class="status-box">
+            <div class="sb-icon">🚪</div>
+            <div class="sb-info">
+              <div class="sb-label">Door</div>
+              <div class="sb-state" id="door-0">—</div>
+            </div>
+          </div>
+          <div class="status-box">
+            <div class="sb-icon">💧</div>
+            <div class="sb-info">
+              <div class="sb-label">Pump</div>
+              <div class="sb-state" id="pump-0">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="ram-row">
+          <div class="sb-label">RAM Usage — <span id="ram-val-0">—</span>%</div>
+          <div class="ram-bar-wrap"><div class="ram-bar" id="ram-bar-0" style="width:0%;background:var(--purple)"></div></div>
+        </div>
+      </div>
+
+      <!-- Pico 2 -->
+      <div class="live-card" id="card-1">
+        <div class="lc-header">
+          <div class="lc-title">Pico 2 — Fully-Closed</div>
+          <div class="lc-ping waiting" id="ping-1">Waiting…</div>
+        </div>
+        <div class="sensor-row">
+          <div class="sensor-box">
+            <div class="sb-label">Humidity</div>
+            <div class="sb-value" id="hm-1" style="color:#58c8ff">—</div>
+            <div class="sb-unit">%</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" id="hm-bar-1" style="width:0%;background:#58c8ff"></div></div>
+          </div>
+          <div class="sensor-box">
+            <div class="sb-label">Temperature</div>
+            <div class="sb-value" id="tp-1" style="color:#ff7b7b">—</div>
+            <div class="sb-unit">°C</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" id="tp-bar-1" style="width:0%;background:#ff7b7b"></div></div>
+          </div>
+        </div>
+        <div class="status-boxes">
+          <div class="status-box">
+            <div class="sb-icon">🚪</div>
+            <div class="sb-info">
+              <div class="sb-label">Door</div>
+              <div class="sb-state" id="door-1">—</div>
+            </div>
+          </div>
+          <div class="status-box">
+            <div class="sb-icon">💧</div>
+            <div class="sb-info">
+              <div class="sb-label">Pump</div>
+              <div class="sb-state" id="pump-1">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="ram-row">
+          <div class="sb-label">RAM Usage — <span id="ram-val-1">—</span>%</div>
+          <div class="ram-bar-wrap"><div class="ram-bar" id="ram-bar-1" style="width:0%;background:var(--purple)"></div></div>
+        </div>
+      </div>
+
+      <!-- Pico 3 -->
+      <div class="live-card" id="card-2">
+        <div class="lc-header">
+          <div class="lc-title">Pico 3 — Free Planting</div>
+          <div class="lc-ping waiting" id="ping-2">Waiting…</div>
+        </div>
+        <div class="sensor-row">
+          <div class="sensor-box">
+            <div class="sb-label">Humidity</div>
+            <div class="sb-value" id="hm-2" style="color:#58c8ff">—</div>
+            <div class="sb-unit">%</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" id="hm-bar-2" style="width:0%;background:#58c8ff"></div></div>
+          </div>
+          <div class="sensor-box">
+            <div class="sb-label">Temperature</div>
+            <div class="sb-value" id="tp-2" style="color:#ff7b7b">—</div>
+            <div class="sb-unit">°C</div>
+            <div class="sb-bar-wrap"><div class="sb-bar" id="tp-bar-2" style="width:0%;background:#ff7b7b"></div></div>
+          </div>
+        </div>
+        <div class="status-boxes">
+          <div class="status-box">
+            <div class="sb-icon">🚪</div>
+            <div class="sb-info">
+              <div class="sb-label">Door</div>
+              <div class="sb-state" id="door-2">—</div>
+            </div>
+          </div>
+          <div class="status-box">
+            <div class="sb-icon">💧</div>
+            <div class="sb-info">
+              <div class="sb-label">Pump</div>
+              <div class="sb-state" id="pump-2">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="ram-row">
+          <div class="sb-label">RAM Usage — <span id="ram-val-2">—</span>%</div>
+          <div class="ram-bar-wrap"><div class="ram-bar" id="ram-bar-2" style="width:0%;background:var(--purple)"></div></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="last-updated" id="lastUpdated"></div>
+  </section>
 
   <!-- PICO DEVICES -->
   <section id="devices">
@@ -1202,12 +1518,110 @@ plt.show()</pre>
 </div>
 
 <script>
+  // ── Tab switcher ─────────────────────────────────────────────────────────
   function switchTab(e, id) {
     const parent = e.target.closest('.step-body');
     parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     parent.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     e.target.classList.add('active');
     parent.querySelector('#' + id).classList.add('active');
+  }
+
+  // ── Live dashboard ────────────────────────────────────────────────────────
+  let pollTimer = null;
+  const POLL_INTERVAL = 5000; // ms
+
+  function ramColor(pct) {
+    if (pct === null || pct === undefined) return 'var(--muted)';
+    if (pct < 60) return 'var(--green)';
+    if (pct < 80) return 'var(--yellow)';
+    return 'var(--red)';
+  }
+
+  function updateCard(pico, i) {
+    const hm   = pico.humidity    != null ? pico.humidity.toFixed(1)    : '—';
+    const tp   = pico.temperature != null ? pico.temperature.toFixed(1) : '—';
+    const ram  = pico.ram         != null ? pico.ram.toFixed(1)         : null;
+
+    document.getElementById(`hm-${i}`).textContent     = hm;
+    document.getElementById(`tp-${i}`).textContent     = tp;
+    document.getElementById(`hm-bar-${i}`).style.width = pico.humidity    != null ? Math.min(pico.humidity, 100) + '%' : '0%';
+    document.getElementById(`tp-bar-${i}`).style.width = pico.temperature != null ? Math.min(pico.temperature / 50 * 100, 100) + '%' : '0%';
+
+    // Door
+    const doorEl = document.getElementById(`door-${i}`);
+    doorEl.textContent = pico.door === 1 ? 'OPEN' : pico.door === 0 ? 'CLOSED' : '—';
+    doorEl.style.color = pico.door === 1 ? 'var(--green)' : 'var(--muted)';
+
+    // Pump
+    const pumpEl = document.getElementById(`pump-${i}`);
+    pumpEl.textContent = pico.pump === 1 ? 'ON' : pico.pump === 0 ? 'OFF' : '—';
+    pumpEl.style.color = pico.pump === 1 ? 'var(--green)' : 'var(--muted)';
+
+    // RAM
+    document.getElementById(`ram-val-${i}`).textContent   = ram ?? '—';
+    document.getElementById(`ram-bar-${i}`).style.width   = ram != null ? ram + '%' : '0%';
+    document.getElementById(`ram-bar-${i}`).style.background = ramColor(ram);
+
+    // Ping badge — if we got data, pico is reachable
+    const pingEl = document.getElementById(`ping-${i}`);
+    pingEl.textContent = 'Online';
+    pingEl.className = 'lc-ping online';
+
+    // Flash card border
+    const card = document.getElementById(`card-${i}`);
+    card.classList.add('fresh');
+    setTimeout(() => card.classList.remove('fresh'), 1000);
+  }
+
+  async function fetchData() {
+    const host = document.getElementById('apiHost').value.trim();
+    const url  = `http://${host}:8080/data`;
+    const dot  = document.getElementById('liveDot');
+    const txt  = document.getElementById('liveStatusText');
+    const err  = document.getElementById('errorBanner');
+
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      dot.className = 'live-dot online';
+      txt.textContent = 'Connected';
+      txt.style.color = 'var(--green)';
+      err.style.display = 'none';
+
+      data.picos.forEach((pico, i) => updateCard(pico, i));
+      document.getElementById('lastUpdated').textContent =
+        `Last updated: ${data.timestamp}  ·  refreshes every ${POLL_INTERVAL / 1000}s`;
+
+    } catch (e) {
+      dot.className = 'live-dot error';
+      txt.textContent = 'Connection failed';
+      txt.style.color = 'var(--red)';
+      err.style.display = 'block';
+      err.textContent = `Cannot reach ${url} — make sure server.py is running and the IP is correct. (${e.message})`;
+
+      // Mark all picos offline
+      for (let i = 0; i < 3; i++) {
+        const pingEl = document.getElementById(`ping-${i}`);
+        pingEl.textContent = 'Offline';
+        pingEl.className = 'lc-ping offline';
+      }
+    }
+  }
+
+  function startPolling() {
+    stopPolling();
+    fetchData();
+    pollTimer = setInterval(fetchData, POLL_INTERVAL);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    document.getElementById('liveDot').className = 'live-dot';
+    document.getElementById('liveStatusText').textContent = 'Stopped';
+    document.getElementById('liveStatusText').style.color = 'var(--muted)';
   }
 </script>
 
