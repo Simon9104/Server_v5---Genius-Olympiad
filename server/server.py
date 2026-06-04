@@ -35,8 +35,11 @@ TS_KEYS = {
 }
 
 # ── Discord ───────────────────────────────────────────────────────────────────
-DISCORD_TOKEN     = 'MTM5OTA4Mzg2ODk4Mzc4NzU0MQ.GNxs36.ijxA50O87YSg3hA1O1kCqWwaoz6Dns4iysXXkA'
-DISCORD_TOKEN_ERR = 'MTQyNjg2MTk3MDEzNjYyOTM3OA.GzNIim.AhxqZ7Qmw-fyADKUtP2pvTNUqGJiKPdgtw4-Aw'
+# Set these environment variables before running:
+#   export DISCORD_TOKEN="your_status_bot_token"
+#   export DISCORD_TOKEN_ERR="your_error_bot_token"
+DISCORD_TOKEN      = os.environ.get('DISCORD_TOKEN', '')
+DISCORD_TOKEN_ERR  = os.environ.get('DISCORD_TOKEN_ERR', '')
 DISCORD_STATUS_URL = 'https://discord.com/api/v9/channels/1409588804951605413/messages'
 DISCORD_ERROR_URL  = 'https://discord.com/api/v9/channels/1426862416565764139/messages'
 DISCORD_HEADERS     = {'authorization': DISCORD_TOKEN}
@@ -181,9 +184,9 @@ async def data_send(session: aiohttp.ClientSession) -> None:
 
         ok_ram = await http_get(session, THINGSPEAK_URL, {
             'api_key': TS_KEYS['ram'],
-            'field1':  state['ram'][0],
-            'field2':  state['ram'][1],
-            'field3':  state['ram'][2],
+            'field1':  state['ram'][0] if state['ram'][0] is not None else 0,
+            'field2':  state['ram'][1] if state['ram'][1] is not None else 0,
+            'field3':  state['ram'][2] if state['ram'][2] is not None else 0,
         })
         if not ok_ram:
             print(f'ThingSpeak [RAM]: FAILED after {MAX_RETRIES} retries.')

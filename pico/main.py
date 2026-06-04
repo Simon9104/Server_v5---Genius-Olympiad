@@ -33,6 +33,7 @@ door        = 0
 pump_state  = 0
 ram_pct     = 0
 sequence    = 0
+scd_ok      = False     # set to True only if SCD4X initialises successfully
 
 # ── Hardware init ─────────────────────────────────────────────────────────────
 led = Pin('LED', Pin.OUT)
@@ -61,9 +62,16 @@ led.high()
 
 # Sensors
 i2c = machine.I2C(0, sda=Pin(16), scl=Pin(17), freq=100000)
-scd = scd4x.SCD4X(i2c)
-sleep(0.5)
-scd.start_periodic_measurement()
+try:
+    scd = scd4x.SCD4X(i2c)
+    sleep(0.5)
+    scd.start_periodic_measurement()
+    scd_ok = True
+    print('SCD4X: OK')
+except Exception as e:
+    scd = None
+    scd_ok = False
+    print('SCD4X not found — temperature disabled:', e)
 
 hm_adc  = ADC(Pin(27))
 pump_pin = Pin(15, Pin.OUT)
@@ -84,21 +92,29 @@ async def humidity_measure():
 
 async def temperature_measure():
     global temp
+    if not scd_ok:
+        return
     while True:
-        if scd.data_ready:
-            temp = round(scd.temperature, 1)
+        try:
+            if scd.data_ready:
+                temp = round(scd.temperature, 1)
+        except Exception as e:
+            print('SCD4X read error:', e)
         await uasyncio.sleep(1)
 
 
 async def door_control():
     global door
     while True:
-        if temp >= DOOR_OPEN_TEMP:
-            servo1.move(170)
-            door = 1
-        else:
-            servo1.move(70)
-            door = 0
+        try:
+            if temp >= DOOR_OPEN_TEMP:
+                servo1.move(170)
+                door = 1
+            else:
+                servo1.move(70)
+                door = 0
+        except Exception as e:
+            print('Door control error:', e)
         await uasyncio.sleep(DOOR_INTERVAL)
 
 
