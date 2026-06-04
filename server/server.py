@@ -1,11 +1,13 @@
 import asyncio
 import csv
 import datetime
+import json
 import os
 import socket
 from collections import deque
 
 import aiohttp
+from aiohttp import web
 
 print('System is starting right now!!!!')
 print('All rights reserved by Simon Onderisin ® 2025')
@@ -14,6 +16,7 @@ print('Any way of copying this code is strictly prohibited!!!!')
 # ── Network ───────────────────────────────────────────────────────────────────
 SERVER_HOST = '0.0.0.0'
 SERVER_PORT  = 9991
+API_PORT     = 8080          # HTTP API for the live dashboard
 RECV_BUFFER  = 2048
 
 PICO_IPS = {
@@ -222,6 +225,39 @@ async def backup_data() -> None:
         await asyncio.sleep(INTERVAL_BACKUP)
 
 
+# ── HTTP API ──────────────────────────────────────────────────────────────────
+async def api_data(_req: web.Request) -> web.Response:
+    payload = {
+        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'picos': [
+            {
+                'id': i + 1,
+                'name': name,
+                'humidity':    state['hm'][i],
+                'temperature': state['temp'][i],
+                'door':        state['door'][i],
+                'pump':        state['pump'][i],
+                'ram':         state['ram'][i],
+            }
+            for i, name in enumerate(['Semi-Closed', 'Fully-Closed', 'Free Planting'])
+        ],
+    }
+    return web.Response(
+        text=json.dumps(payload),
+        content_type='application/json',
+        headers={'Access-Control-Allow-Origin': '*'},
+    )
+
+async def api_server() -> None:
+    app = web.Application()
+    app.router.add_get('/data', api_data)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, SERVER_HOST, API_PORT)
+    await site.start()
+    print(f'API server running on http://{SERVER_HOST}:{API_PORT}/data')
+    print('-' * 33)
+
 async def ping_pico(index: int) -> None:
     ip   = PICO_IPS[index + 1]
     name = _PICO_NAME[index]
@@ -246,6 +282,7 @@ async def main() -> None:
     async with aiohttp.ClientSession(connector=connector) as session:
         await http_post(session, DISCORD_STATUS_URL, DISCORD_HEADERS, 'Server v5 started.')
         async with asyncio.TaskGroup() as tg:
+            tg.create_task(api_server())
             tg.create_task(data_recv())
             tg.create_task(data_send(session))
             tg.create_task(transfer_discord(session))
