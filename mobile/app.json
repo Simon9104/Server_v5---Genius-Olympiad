@@ -31,6 +31,7 @@
         "backgroundColor": "#1a1a2e"
       },
       "package": "com.greeniot.monitor",
+      "usesCleartextTraffic": true,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
