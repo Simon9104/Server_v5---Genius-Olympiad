@@ -108,8 +108,8 @@ class GreenIOTApp(tk.Tk):
             command=self._clear_log).pack(side='left')
 
         # ── Log area ──────────────────────────────────────────────────────────
-        log_frame = tk.Frame(self, bg=BG, padx=20, pady=(0, 16))
-        log_frame.pack(fill='both', expand=True)
+        log_frame = tk.Frame(self, bg=BG, padx=20)
+        log_frame.pack(fill='both', expand=True, pady=(0, 16))
 
         tk.Label(log_frame, text='Server Output', fg=MUTED, bg=BG,
                  font=label_font).pack(anchor='w', pady=(0, 4))
