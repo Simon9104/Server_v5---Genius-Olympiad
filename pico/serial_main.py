@@ -86,16 +86,26 @@ def send_data(hm, temp, door, pump_state):
 # ── Read incoming commands from server (non-blocking) ─────────────────────────
 def check_commands():
     global door_manual
-    poll = select.poll()
-    poll.register(sys.stdin, select.POLLIN)
-    events = poll.poll(0)
-    if not events:
+    try:
+        # MicroPython: check raw bytes available on stdin buffer
+        n = sys.stdin.buffer.seek(0, 2) if hasattr(sys.stdin, 'buffer') else 0
+    except Exception:
+        n = 0
+
+    # Fallback: try reading with any() on stdin — most reliable on RP2040
+    try:
+        import uselect
+        if not uselect.select([sys.stdin], [], [], 0)[0]:
+            return
+    except Exception:
         return
-    line = sys.stdin.readline().strip()
-    if not line:
+
+    try:
+        line = sys.stdin.readline().strip()
+    except Exception:
         return
-    # Expected format: DOOR1:1 / DOOR1:0 / DOOR1:A
-    if ':' not in line:
+
+    if not line or ':' not in line:
         return
     key, _, val = line.partition(':')
     key = key.strip()
@@ -105,13 +115,16 @@ def check_commands():
         return
     if val == 'A':
         door_manual = None
-        print(f'{expected} → AUTO')
+        print(f'{expected} set AUTO')
+        print('---')
     elif val == '1':
         door_manual = 1
-        print(f'{expected} → OPEN')
+        print(f'{expected} set OPEN')
+        print('---')
     elif val == '0':
         door_manual = 0
-        print(f'{expected} → CLOSE')
+        print(f'{expected} set CLOSE')
+        print('---')
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
 print(f'GreenIOT Pico {PICO_ID} — Serial Mode')
