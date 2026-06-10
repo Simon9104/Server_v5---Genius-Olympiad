@@ -99,6 +99,9 @@ def parse_line(line: str) -> None:
     print(f"{seq[field][idx]}. {_LABEL[field]} — {_PICO_NAME[idx]} Pico: {value}")
     print('-' * 33)
 
+# ── Active serial connection (shared so door API can write back) ──────────────
+_serial_conn: serial.Serial | None = None
+
 # ── Auto-detect Pico COM port ─────────────────────────────────────────────────
 def detect_pico_port() -> str | None:
     for port in serial.tools.list_ports.comports():
@@ -108,8 +111,20 @@ def detect_pico_port() -> str | None:
     ports = serial.tools.list_ports.comports()
     return ports[0].device if ports else None
 
+def serial_write(cmd: str) -> None:
+    global _serial_conn
+    if _serial_conn and _serial_conn.is_open:
+        try:
+            _serial_conn.write((cmd + '\n').encode())
+            print(f'Serial TX: {cmd}')
+        except Exception as e:
+            print(f'Serial write error: {e}')
+    else:
+        print(f'Serial TX skipped (not connected): {cmd}')
+
 # ── Serial reader task ────────────────────────────────────────────────────────
 async def serial_recv() -> None:
+    global _serial_conn
     port = SERIAL_PORT or detect_pico_port()
     if not port:
         print('ERROR: No COM port found. Plug in the Pico and restart.')
@@ -120,13 +135,12 @@ async def serial_recv() -> None:
 
     while True:
         try:
-            ser = serial.Serial(port, BAUD_RATE, timeout=1)
+            _serial_conn = serial.Serial(port, BAUD_RATE, timeout=1)
             print(f'Serial connected on {port}')
             print('-' * 33)
-            buf = ''
             while True:
                 def _read():
-                    return ser.readline()
+                    return _serial_conn.readline()
                 raw = await loop.run_in_executor(None, _read)
                 if raw:
                     line = raw.decode(errors='ignore').strip()
@@ -134,9 +148,11 @@ async def serial_recv() -> None:
                         parse_line(line)
                 await asyncio.sleep(0)
         except serial.SerialException as e:
+            _serial_conn = None
             print(f'Serial error: {e} — retrying in 5s…')
             await asyncio.sleep(5)
         except Exception as e:
+            _serial_conn = None
             print(f'serial_recv error: {e}')
             await asyncio.sleep(2)
 
@@ -246,6 +262,9 @@ async def api_door(req: web.Request) -> web.Response:
     door_override[pico] = value
     action = 'AUTO' if value is None else ('OPEN' if value == 1 else 'CLOSE')
     print(f'Door override: Pico {pico+1} → {action}')
+    # Send command to Pico over serial: DOOR1:1 / DOOR1:0 / DOOR1:A
+    wire_val = 'A' if value is None else str(value)
+    serial_write(f'DOOR{pico+1}:{wire_val}')
     return web.Response(text=json.dumps({'ok': True}), content_type='application/json', headers=cors)
 
 async def api_cmd(req: web.Request) -> web.Response:

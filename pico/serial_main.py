@@ -1,4 +1,6 @@
 import time
+import sys
+import select
 from machine import Pin, ADC, I2C, PWM
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -78,11 +80,43 @@ def send_data(hm, temp, door, pump_state):
     print(f'RAM{pid}:{ram_pct()}')
     print('---')          # end-of-frame marker
 
+# ── Read incoming commands from server (non-blocking) ─────────────────────────
+def check_commands():
+    global door_manual
+    poll = select.poll()
+    poll.register(sys.stdin, select.POLLIN)
+    events = poll.poll(0)
+    if not events:
+        return
+    line = sys.stdin.readline().strip()
+    if not line:
+        return
+    # Expected format: DOOR1:1 / DOOR1:0 / DOOR1:A
+    if ':' not in line:
+        return
+    key, _, val = line.partition(':')
+    key = key.strip()
+    val = val.strip()
+    expected = f'DOOR{PICO_ID}'
+    if key != expected:
+        return
+    if val == 'A':
+        door_manual = None
+        print(f'{expected} → AUTO')
+    elif val == '1':
+        door_manual = 1
+        print(f'{expected} → OPEN')
+    elif val == '0':
+        door_manual = 0
+        print(f'{expected} → CLOSE')
+
 # ── Main loop ─────────────────────────────────────────────────────────────────
 print(f'GreenIOT Pico {PICO_ID} — Serial Mode')
 print('---')
 
 while True:
+    check_commands()
+
     hm   = read_humidity()
     temp = None
 
