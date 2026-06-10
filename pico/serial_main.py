@@ -1,7 +1,8 @@
 import time
 import sys
 import select
-from machine import Pin, ADC, I2C, PWM
+from machine import Pin, ADC, I2C
+from servo import Servo
 
 # ── Config ────────────────────────────────────────────────────────────────────
 PICO_ID       = 1          # Change to 2 or 3 on other Picos
@@ -13,10 +14,9 @@ SDA_PIN       = 16
 SCL_PIN       = 17
 
 # ── Hardware init ─────────────────────────────────────────────────────────────
-pump  = Pin(PUMP_PIN, Pin.OUT)
-hm_adc = ADC(Pin(HM_PIN))
-servo_pwm = PWM(Pin(SERVO_PIN))
-servo_pwm.freq(50)
+pump    = Pin(PUMP_PIN, Pin.OUT)
+hm_adc  = ADC(Pin(HM_PIN))
+servo1  = Servo(pin=SERVO_PIN)
 
 # ── SCD4X (CO2/temp) — optional, skip if not connected ───────────────────────
 scd_ok = False
@@ -38,16 +38,12 @@ try:
 except Exception as e:
     print('SCD4X init failed:', e)
 
-# ── Servo helpers ─────────────────────────────────────────────────────────────
-# PWM period = 20ms (50Hz). Pulse: 1ms=0°, 1.5ms=90°, 2ms=180°
-def _duty(ms):
-    return int(ms / 20 * 65535)
-
+# ── Servo helpers (matches main.py: 170°=open, 70°=close) ────────────────────
 def servo_open():
-    servo_pwm.duty_u16(_duty(2.0))   # 180° — fully open
+    servo1.move(170)
 
 def servo_close():
-    servo_pwm.duty_u16(_duty(1.0))   # 0°   — fully closed
+    servo1.move(70)
 
 # ── Read humidity (analog, 0-100%) ────────────────────────────────────────────
 def read_humidity():
