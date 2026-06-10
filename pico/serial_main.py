@@ -39,11 +39,15 @@ except Exception as e:
     print('SCD4X init failed:', e)
 
 # ── Servo helpers ─────────────────────────────────────────────────────────────
+# PWM period = 20ms (50Hz). Pulse: 1ms=0°, 1.5ms=90°, 2ms=180°
+def _duty(ms):
+    return int(ms / 20 * 65535)
+
 def servo_open():
-    servo_pwm.duty_u16(int(0.1 / 20 * 65535))
+    servo_pwm.duty_u16(_duty(2.0))   # 180° — fully open
 
 def servo_close():
-    servo_pwm.duty_u16(int(0.05 / 20 * 65535))
+    servo_pwm.duty_u16(_duty(1.0))   # 0°   — fully closed
 
 # ── Read humidity (analog, 0-100%) ────────────────────────────────────────────
 def read_humidity():
