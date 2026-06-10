@@ -132,4 +132,8 @@ while True:
     door_state = update_door(temp)
 
     send_data(hm, temp, door_state, pump_state)
-    time.sleep(SEND_INTERVAL)
+
+    # Check for commands every second while waiting
+    for _ in range(SEND_INTERVAL):
+        check_commands()
+        time.sleep(1)
