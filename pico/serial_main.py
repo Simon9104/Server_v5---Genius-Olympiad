@@ -125,8 +125,7 @@ while True:
 
     if scd_ok:
         try:
-            if scd.data_ready:
-                temp = round(scd.temperature, 1)
+            temp = round(scd.temperature, 1)
         except Exception as e:
             print('SCD4X read error:', e)
 
