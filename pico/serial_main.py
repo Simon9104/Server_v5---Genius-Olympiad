@@ -27,9 +27,12 @@ try:
     devs = i2c.scan()
     if devs:
         scd = SCD4X(i2c)
+        scd.stop_periodic_measurement()
+        time.sleep(1)
         scd.start_periodic_measurement()
+        print('SCD4X OK — waiting 5s for first measurement…')
+        time.sleep(5)
         scd_ok = True
-        print('SCD4X OK')
     else:
         print('SCD4X not found — skipping temperature sensor')
 except Exception as e:
@@ -123,7 +126,6 @@ while True:
     if scd_ok:
         try:
             if scd.data_ready:
-                scd.measure()
                 temp = round(scd.temperature, 1)
         except Exception as e:
             print('SCD4X read error:', e)
